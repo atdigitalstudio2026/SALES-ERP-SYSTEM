@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { SalesOrder } from '../../types';
+import { MonthlyRevenueChart } from './MonthlyRevenueChart';
 
 interface DashboardViewProps {
   onOpenCreateOrder: () => void;
@@ -83,40 +84,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Multi-Company Consolidation</span>
+              <span>Konsolidasi Penjualan Grup</span>
               <span aria-hidden="true">·</span>
               <span>
                 {selectedCompanyId === 'ALL'
-                  ? 'All 4 Operating Entities'
+                  ? 'Seluruh Anak Perusahaan Holding'
                   : selectedCompany?.company_name}
               </span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {selectedCompanyId === 'ALL'
-                ? 'Consolidated Sales Dashboard'
+                ? 'Dashboard Penjualan Konsolidasian'
                 : `${selectedCompany?.company_name} (${selectedCompany?.company_code})`}
             </h1>
             <p className="text-xs text-slate-600 mt-1">
               {selectedCompanyId === 'ALL'
-                ? 'Consolidating operational performance, collections, and receivables across all subsidiaries.'
-                : `Entity NPWP: ${selectedCompany?.tax_number} · ${selectedCompany?.address}`}
+                ? 'Pemantauan performa transaksi, realisasi pembayaran, dan saldo piutang berjalan across holding.'
+                : `NPWP Resmi: ${selectedCompany?.tax_number} · Alamat: ${selectedCompany?.address}`}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenCreateOrder}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Create Sales Order</span>
+              <span>Buat Pesanan Baru</span>
             </button>
           </div>
         </div>
 
-        {/* Company Quick-Selector Segmented Tabs (Requirement #14) */}
+        {/* Company Quick-Selector Segmented Tabs */}
         <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-medium text-slate-500 mr-2">Filter Entity:</span>
+          <span className="text-xs font-bold text-slate-500 mr-2">Pilih Entitas:</span>
           {currentUser.role !== 'sales' && (
             <button
               onClick={() => setSelectedCompanyId('ALL')}
@@ -126,7 +127,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              All Companies
+              Semua Perusahaan
             </button>
           )}
 
@@ -241,22 +242,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Requirement #15: COMPANY BREAKDOWN TABLE */}
+      {/* Monthly Sales Revenue Chart (Bar & Line Visualization) */}
+      <MonthlyRevenueChart
+        orders={filteredOrders}
+        companies={companies}
+        selectedCompanyId={selectedCompanyId}
+        selectedCompanyName={selectedCompany?.company_name}
+      />
+
+      {/* COMPANY BREAKDOWN TABLE */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-slate-900 tracking-tight">
-              Company Breakdown (Multi-Entity Performance)
+              Kinerja Penjualan per Anak Perusahaan
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Consolidated revenue, order counts, payments, and outstanding balances per legal entity.
+              Rangkuman omset, volume pesanan, penerimaan dana, dan saldo piutang tertagih per badan hukum.
             </p>
           </div>
           <button
             onClick={() => onNavigateToTab('reports')}
             className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
           >
-            <span>Full Financial Reports</span>
+            <span>Lihat Laporan Lengkap</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -265,13 +274,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold text-[11px] tracking-wider">
               <tr>
-                <th className="py-3 px-4">Company / Legal Entity</th>
-                <th className="py-3 px-4 text-center">Entity Code</th>
-                <th className="py-3 px-4 text-right">Orders</th>
-                <th className="py-3 px-4 text-right">Sales Amount</th>
-                <th className="py-3 px-4 text-right">Paid Amount</th>
-                <th className="py-3 px-4 text-right">Outstanding (AR)</th>
-                <th className="py-3 px-4 text-center">Action</th>
+                <th className="py-3 px-4">Badan Usaha / PT</th>
+                <th className="py-3 px-4 text-center">Kode</th>
+                <th className="py-3 px-4 text-right">Pesanan</th>
+                <th className="py-3 px-4 text-right">Total Penjualan</th>
+                <th className="py-3 px-4 text-right">Terbayar</th>
+                <th className="py-3 px-4 text-right">Sisa Piutang (AR)</th>
+                <th className="py-3 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -310,20 +319,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       onClick={() => setSelectedCompanyId(row.company_id)}
                       className="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1"
                     >
-                      <span>Focus</span>
+                      <span>Filter PT</span>
                       <ArrowUpRight className="w-3 h-3" />
                     </button>
                   </td>
                 </tr>
               ))}
 
-              {/* Requirement #15: TOTAL ROW */}
+              {/* TOTAL ROW */}
               <tr className="bg-slate-100/80 font-bold border-t-2 border-slate-300 text-slate-900">
                 <td className="py-3.5 px-4 uppercase tracking-wider text-[11px]">
-                  TOTAL CONSOLIDATED
+                  TOTAL KONSOLIDASI GRUP
                 </td>
                 <td className="py-3.5 px-4 text-center text-slate-500 font-mono text-[11px]">
-                  4 ENTITIES
+                  4 ENTITAS
                 </td>
                 <td className="py-3.5 px-4 text-right font-mono tabular-nums">
                   {breakdownTotalOrders}

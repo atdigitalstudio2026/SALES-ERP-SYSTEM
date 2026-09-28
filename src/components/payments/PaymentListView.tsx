@@ -54,15 +54,15 @@ export const PaymentListView: React.FC<PaymentListViewProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Financial Collections</span>
+              <span>Keuangan & Piutang Usaha</span>
               <span aria-hidden="true">·</span>
-              <span>Requirement #10: Company strictly bound from SO</span>
+              <span>Buku Pembayaran & Kas Masuk</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Payments & Collections Register
+              Register Penerimaan Pembayaran
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Every payment record is inherently bound to its parent Sales Order company entity.
+              Pencatatan realisasi pelunasan piutang yang terikat langsung dengan nomor faktur dan badan usaha penerbit.
             </p>
           </div>
 

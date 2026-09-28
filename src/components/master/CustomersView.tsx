@@ -155,25 +155,25 @@ export const CustomersView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Client Governance</span>
+              <span>Manajemen Mitra & Pelanggan</span>
               <span aria-hidden="true">·</span>
-              <span>Requirement #11: Option A Global Customer Model</span>
+              <span>Tata Kelola Multi-PT</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Global Customers & Multi-PT Terms
+              Master Pelanggan & Termin Kredit PT
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              One master customer entity transacts across multiple operating companies with independent credit limits and payment terms.
+              Satu data master pelanggan yang dapat bertransaksi ke berbagai anak perusahaan dengan limit kredit dan termin pembayaran (TOP) independen.
             </p>
           </div>
 
           {canManage && (
             <button
               onClick={handleOpenAddCustomer}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Global Customer</span>
+              <span>+ Tambah Pelanggan Baru</span>
             </button>
           )}
         </div>
@@ -348,10 +348,10 @@ export const CustomersView: React.FC = () => {
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div>
                 <div className="text-xs text-blue-400 font-semibold uppercase">
-                  Requirement #11: customer_companies
+                  Pengaturan Termin PT
                 </div>
                 <h3 className="text-base font-bold text-white">
-                  Configure PT Terms & Credit Limit
+                  Atur Batas Kredit & Termin Pembayaran
                 </h3>
               </div>
               <button

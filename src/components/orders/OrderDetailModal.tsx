@@ -10,8 +10,11 @@ import {
   Calendar,
   User,
   CheckCircle,
+  CheckCircle2,
   Clock,
   FileText,
+  XCircle,
+  RotateCw,
 } from 'lucide-react';
 
 interface OrderDetailModalProps {
@@ -87,17 +90,37 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               </div>
 
               <div className="text-right sm:border-l sm:border-slate-200 sm:pl-5">
-                <span
-                  className={`inline-block px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${
-                    order.status === 'completed'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : order.status === 'confirmed'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {order.status}
-                </span>
+                {order.status === 'cancelled' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200/80 shadow-2xs">
+                    <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Cancelled</span>
+                  </span>
+                ) : order.status === 'completed' || order.outstanding_amount <= 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Paid (Lunas)</span>
+                  </span>
+                ) : order.paid_amount && order.paid_amount > 0 && order.outstanding_amount > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
+                    <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Partial (Sebagian)</span>
+                  </span>
+                ) : order.status === 'processing' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200/80 shadow-2xs">
+                    <RotateCw className="w-4 h-4 text-sky-600 shrink-0" />
+                    <span>Processing</span>
+                  </span>
+                ) : order.status === 'draft' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/80 shadow-2xs">
+                    <FileText className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span>Draft</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/80 shadow-2xs">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Pending</span>
+                  </span>
+                )}
                 <div className="text-xs text-slate-500 mt-2">
                   Order Date: <span className="font-semibold text-slate-800">{formatDate(order.order_date)}</span>
                 </div>

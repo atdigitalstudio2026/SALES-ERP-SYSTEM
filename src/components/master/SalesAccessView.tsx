@@ -241,10 +241,10 @@ export const SalesAccessView: React.FC = () => {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
               <span>Manajemen Tim Sales & Akses Entitas</span>
               <span aria-hidden="true">·</span>
-              <span>Requirement #2, #5, #6: Master Sales & sales_company_access</span>
+              <span>Otorisasi Penjualan Multi-PT</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Master Sales & Sales Company Access Matrix
+              Master Sales & Matriks Akses Perusahaan
             </h1>
             <p className="text-xs text-slate-500 mt-1">
               Kelola data sales (tambah, edit, hapus) serta izin akses transaksi antar anak perusahaan dalam satu tempat.

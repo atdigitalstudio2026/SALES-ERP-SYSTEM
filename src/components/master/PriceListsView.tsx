@@ -114,25 +114,25 @@ export const PriceListsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Dynamic Commercial Pricing</span>
+              <span>Strategi Harga Komersial</span>
               <span aria-hidden="true">·</span>
-              <span>Requirement #12: Multi-Company Price Books</span>
+              <span>Katalog Harga Multi-Entitas</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Price Lists per Legal Entity
+              Daftar Harga Jual per Entitas PT
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Configure differentiated pricing for identical items across operating entities, customer tiers, and quantity brackets.
+              Atur diferensiasi harga jual produk yang sama di tiap anak perusahaan, tipe pelanggan, dan batas kuantitas minimum.
             </p>
           </div>
 
           {canManage && (
             <button
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Price Rule</span>
+              <span>+ Atur Aturan Harga Baru</span>
             </button>
           )}
         </div>
@@ -141,14 +141,14 @@ export const PriceListsView: React.FC = () => {
         <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-              Filter by Legal Entity
+              Filter Berdasarkan PT
             </label>
             <select
               value={selectedCompanyFilter}
               onChange={(e) => setSelectedCompanyFilter(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500"
             >
-              <option value="ALL">All Companies</option>
+              <option value="ALL">Semua Perusahaan</option>
               {companies.map((c) => (
                 <option key={c.company_id} value={c.company_id}>
                   {c.company_code} - {c.company_name}
@@ -159,14 +159,14 @@ export const PriceListsView: React.FC = () => {
 
           <div>
             <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-              Filter by Product
+              Filter Berdasarkan Produk
             </label>
             <select
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500"
             >
-              <option value="ALL">All Products</option>
+              <option value="ALL">Semua Produk</option>
               {products.map((p) => (
                 <option key={p.product_id} value={p.product_id}>
                   {p.product_name} ({p.product_code})
@@ -177,13 +177,13 @@ export const PriceListsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Requirement #12 Example Banner */}
-      <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-xs text-amber-900">
-        <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+      {/* Modern Informative Advisory Banner */}
+      <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-4 flex items-start gap-3 text-xs text-blue-950">
+        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
         <div>
-          <span className="font-bold">Requirement #12 Showcase: Multi-Entity Price Variation</span>
-          <p className="mt-0.5 text-[11px] text-amber-800">
-            For <strong>Akram Khalas 200g</strong>: PT Exindokarsa Agung (EXA) price is <strong>Rp 25.000</strong>, while PT Indo Megah Raya (IMR) price is <strong>Rp 24.500</strong>. When a sales rep selects the company on the order header, the correct price automatically resolves!
+          <span className="font-bold">Otomatisasi Harga Berdasarkan PT Penjual</span>
+          <p className="mt-0.5 text-[11px] text-blue-800 leading-relaxed">
+            Harga jual otomatis terisi sesuai badan usaha (PT) yang dipilih di header Sales Order. Setiap entitas dapat menetapkan marjin keuntungan atau harga acuan yang berbeda untuk barang yang sama.
           </p>
         </div>
       </div>
@@ -274,10 +274,10 @@ export const PriceListsView: React.FC = () => {
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div>
                 <div className="text-xs text-blue-400 font-semibold uppercase">
-                  Requirement #12: Price Rule
+                  Aturan Harga Produk
                 </div>
                 <h3 className="text-base font-bold text-white">
-                  {editingPrice ? 'Edit Price Rule' : 'Add Price Rule'}
+                  {editingPrice ? 'Edit Aturan Harga' : 'Tambah Aturan Harga Baru'}
                 </h3>
               </div>
               <button

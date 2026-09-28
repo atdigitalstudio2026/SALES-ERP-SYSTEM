@@ -36,15 +36,15 @@ export const AuditLogView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Security & Traceability</span>
+              <span>Keamanan & Kepatuhan Sistem</span>
               <span aria-hidden="true">·</span>
-              <span>Requirement #17: Structured Audit Protocol</span>
+              <span>Protokol Audit Terstruktur</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Enterprise Audit Trail
+              Audit Trail & Riwayat Aktivitas Sistem
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Immutable activity records capturing user, action, module, company entity, and target records.
+              Pencatatan riwayat sistem yang tidak dapat diubah (immutable) mencakup nama user, aksi, modul, entitas PT, dan data terkait.
             </p>
           </div>
 
@@ -52,10 +52,10 @@ export const AuditLogView: React.FC = () => {
             <Shield className="w-5 h-5 text-blue-600 shrink-0" />
             <div>
               <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                Log Standard
+                Format Standar Log
               </span>
               <div className="font-mono text-xs font-bold text-slate-900">
-                [USER] | [ACTION] | [MODULE] | [COMPANY] | [RECORD]
+                [USER] | [AKSI] | [MODUL] | [PT] | [RECORD]
               </div>
             </div>
           </div>
@@ -145,11 +145,11 @@ export const AuditLogView: React.FC = () => {
             <table className="w-full text-left text-xs font-mono">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-semibold text-[11px] tracking-wider font-sans">
                 <tr>
-                  <th className="py-2.5 px-4 w-44">Timestamp</th>
-                  <th className="py-2.5 px-4">Requirement #17 Formatted Event Log</th>
-                  <th className="py-2.5 px-4 text-center w-28">Entity Code</th>
-                  <th className="py-2.5 px-4 text-center w-28">Action</th>
-                  <th className="py-2.5 px-4 w-36">Module</th>
+                  <th className="py-2.5 px-4 w-44">Waktu Kejadian</th>
+                  <th className="py-2.5 px-4">Deskripsi Aktivitas & Riwayat Event</th>
+                  <th className="py-2.5 px-4 text-center w-28">Entitas PT</th>
+                  <th className="py-2.5 px-4 text-center w-28">Aksi</th>
+                  <th className="py-2.5 px-4 w-36">Modul</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

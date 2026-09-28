@@ -527,7 +527,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
             <div className="text-right">
               <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                Assigned SO Number (Requirement #9)
+                Nomor Sales Order Resmi
               </div>
               <div className="font-mono text-lg font-bold text-blue-900 bg-white border border-blue-200 px-3 py-1 rounded-md inline-block shadow-2xs">
                 {soNumber || previewSONumber}

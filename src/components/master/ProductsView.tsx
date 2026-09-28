@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { Product } from '../../types';
 import { formatIDR } from '../../lib/currency';
+import { exportProductsToCSV } from '../../lib/csvExport';
 import {
   Package,
   Plus,
@@ -184,32 +185,14 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ onNavigateToTab }) =
       return;
     }
 
-    const headers = ['Kode SKU', 'Nama Produk', 'Kategori', 'Satuan', 'HPP Acuan (Rp)', 'Deskripsi'];
-    const rows = listToExport.map((p) => [
-      `"${p.product_code.replace(/"/g, '""')}"`,
-      `"${p.product_name.replace(/"/g, '""')}"`,
-      `"${(p.category || 'Umum').replace(/"/g, '""')}"`,
-      `"${(p.unit || 'Pcs').replace(/"/g, '""')}"`,
-      p.base_cost || 0,
-      `"${(p.description || '').replace(/"/g, '""')}"`,
-    ]);
-
-    const csvContent =
-      '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\r\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     const dateStr = new Date().toISOString().split('T')[0];
-    link.download = `katalog_master_produk_${dateStr}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const filename = `katalog_master_produk_${dateStr}.csv`;
+    const success = exportProductsToCSV(listToExport, filename);
 
-    setSuccessMsg(`Berhasil mengekspor ${listToExport.length} produk ke file CSV!`);
-    setTimeout(() => setSuccessMsg(null), 4000);
+    if (success) {
+      setSuccessMsg(`Berhasil mengekspor ${listToExport.length} produk ke file CSV!`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    }
   };
 
   // ==========================================

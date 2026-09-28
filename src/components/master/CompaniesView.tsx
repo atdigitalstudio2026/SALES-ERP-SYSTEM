@@ -96,25 +96,25 @@ export const CompaniesView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Master Entity Configuration</span>
+              <span>Konfigurasi Entitas Bisnis</span>
               <span aria-hidden="true">·</span>
-              <span>Requirement #1 & #22: Multi-Entity Foundation</span>
+              <span>Anak Perusahaan Holding</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Master Companies (Legal Entities)
+              Master Perusahaan (Badan Hukum PT)
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Independent corporate subsidiaries within one unified ERP instance.
+              Daftar anak perusahaan operasional independen yang tergabung dalam satu sistem ERP terpadu.
             </p>
           </div>
 
           {canManage && (
             <button
               onClick={handleOpenAdd}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add New Legal Entity (Req #22)</span>
+              <span>+ Tambah Anak Perusahaan (PT)</span>
             </button>
           )}
         </div>
@@ -197,7 +197,7 @@ export const CompaniesView: React.FC = () => {
                               ? 'text-red-700 bg-red-50 hover:bg-red-100'
                               : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
                           }`}
-                          title="Activate / Deactivate Company (Requirement #1)"
+                          title="Ubah Status Aktif / Nonaktif Perusahaan"
                         >
                           {c.status === 'active' ? 'Deactivate' : 'Activate'}
                         </button>
@@ -218,10 +218,10 @@ export const CompaniesView: React.FC = () => {
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div>
                 <div className="text-xs text-blue-400 font-semibold uppercase tracking-wider">
-                  Requirement #1 & #22
+                  Entitas Legal
                 </div>
                 <h2 className="text-base font-bold text-white">
-                  {editingCompany ? 'Edit Legal Entity' : 'Add New Legal Entity'}
+                  {editingCompany ? 'Edit Anak Perusahaan' : 'Tambah Anak Perusahaan Baru'}
                 </h2>
               </div>
               <button

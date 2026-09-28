@@ -274,15 +274,15 @@ export const ReportsView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Financial & Operational Intelligence</span>
+              <span>Intelijen Keuangan & Operasional</span>
               <span aria-hidden="true">·</span>
-              <span>Requirement #13 & #18</span>
+              <span>Laporan Eksekutif Konsolidasi</span>
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Multi-Company Reporting & Analytics
+              Laporan Keuangan & Penjualan Grup
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Consolidated or subsidiary-isolated reports with automated company file naming on export.
+              Analisis performa konsolidasi holding atau per anak perusahaan dengan penamaan file export otomatis.
             </p>
           </div>
 
@@ -292,16 +292,16 @@ export const ReportsView: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg transition-colors"
             >
               <Printer className="w-4 h-4" />
-              <span>Print Report</span>
+              <span>Cetak Laporan</span>
             </button>
 
-            {/* Requirement #18 Export button */}
+            {/* Export button */}
             <button
               onClick={handleExportCSV}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
             >
               <Download className="w-4 h-4" />
-              <span>Export ({companyCodeForExport === 'ALL' ? 'All Companies' : companyCodeForExport})</span>
+              <span>Ekspor CSV ({companyCodeForExport === 'ALL' ? 'Semua PT' : companyCodeForExport})</span>
             </button>
           </div>
         </div>
@@ -397,7 +397,7 @@ export const ReportsView: React.FC = () => {
         </button>
       </div>
 
-      {/* PRINT HEADER FOR OFFICIAL REPORT (Requirement #18) */}
+      {/* PRINT HEADER FOR OFFICIAL REPORT */}
       <div className="print-only hidden p-6 border-b-2 border-slate-900 mb-6">
         <h1 className="text-xl font-bold">
           {selectedCompany ? selectedCompany.company_name : 'CONSOLIDATED GROUP REPORT'}
