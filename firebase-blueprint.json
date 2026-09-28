@@ -1,0 +1,177 @@
+{
+  "entities": {
+    "companies": {
+      "title": "Company",
+      "description": "Multi-company legal entity definitions",
+      "properties": {
+        "company_id": { "type": "string" },
+        "company_code": { "type": "string" },
+        "company_name": { "type": "string" },
+        "legal_name": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "tax_number": { "type": "string" },
+        "status": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["company_id", "company_code", "company_name", "tax_number", "status"]
+    },
+    "sales": {
+      "title": "SalesPerson",
+      "description": "Sales team personnel",
+      "properties": {
+        "sales_id": { "type": "string" },
+        "sales_code": { "type": "string" },
+        "sales_name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "company_id": { "type": "string" },
+        "area": { "type": "string" },
+        "position": { "type": "string" },
+        "status": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["sales_id", "sales_code", "sales_name", "company_id", "status"]
+    },
+    "sales_company_access": {
+      "title": "SalesCompanyAccess",
+      "description": "Multi-company access permissions matrix per sales rep",
+      "properties": {
+        "id": { "type": "string" },
+        "sales_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "is_default": { "type": "boolean" },
+        "status": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "sales_id", "company_id", "is_default", "status"]
+    },
+    "customers": {
+      "title": "Customer",
+      "description": "Global customer accounts",
+      "properties": {
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "contact_person": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "customer_type": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["customer_id", "customer_name", "customer_type"]
+    },
+    "customer_companies": {
+      "title": "CustomerCompany",
+      "description": "Customer credit terms and customer codes per legal entity",
+      "properties": {
+        "id": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "customer_code": { "type": "string" },
+        "payment_terms": { "type": "string" },
+        "credit_limit": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "customer_id", "company_id", "payment_terms", "credit_limit"]
+    },
+    "products": {
+      "title": "Product",
+      "description": "Product catalog",
+      "properties": {
+        "product_id": { "type": "string" },
+        "product_code": { "type": "string" },
+        "product_name": { "type": "string" },
+        "category": { "type": "string" },
+        "unit": { "type": "string" },
+        "base_cost": { "type": "number" },
+        "description": { "type": "string" }
+      },
+      "required": ["product_id", "product_code", "product_name", "unit"]
+    },
+    "price_lists": {
+      "title": "PriceList",
+      "description": "Multi-entity product pricing rules",
+      "properties": {
+        "id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "product_id": { "type": "string" },
+        "customer_type": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "min_quantity": { "type": "number" },
+        "unit_price": { "type": "number" },
+        "effective_date": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "company_id", "product_id", "min_quantity", "unit_price"]
+    },
+    "sales_orders": {
+      "title": "SalesOrder",
+      "description": "Sales Orders with company foreign key",
+      "properties": {
+        "so_id": { "type": "string" },
+        "so_number": { "type": "string" },
+        "company_id": { "type": "string" },
+        "sales_id": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "order_date": { "type": "string" },
+        "payment_terms": { "type": "string" },
+        "due_date": { "type": "string" },
+        "delivery_date": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string" },
+        "subtotal": { "type": "number" },
+        "tax_enabled": { "type": "boolean" },
+        "tax_rate": { "type": "number" },
+        "tax_amount": { "type": "number" },
+        "total_amount": { "type": "number" },
+        "paid_amount": { "type": "number" },
+        "outstanding_amount": { "type": "number" },
+        "items": { "type": "array" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["so_id", "so_number", "company_id", "sales_id", "customer_id", "total_amount", "status"]
+    },
+    "payments": {
+      "title": "Payment",
+      "description": "Customer payments bound to company of sales order",
+      "properties": {
+        "payment_id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "so_id": { "type": "string" },
+        "so_number": { "type": "string" },
+        "payment_number": { "type": "string" },
+        "payment_date": { "type": "string" },
+        "amount": { "type": "number" },
+        "payment_method": { "type": "string" },
+        "reference_number": { "type": "string" },
+        "bank_name": { "type": "string" },
+        "notes": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["payment_id", "company_id", "so_id", "amount", "payment_method"]
+    },
+    "audit_logs": {
+      "title": "AuditLog",
+      "description": "Enterprise audit log stream",
+      "properties": {
+        "id": { "type": "string" },
+        "company_id": { "type": "string" },
+        "company_code": { "type": "string" },
+        "user_id": { "type": "string" },
+        "user_name": { "type": "string" },
+        "role": { "type": "string" },
+        "action": { "type": "string" },
+        "module": { "type": "string" },
+        "record_id": { "type": "string" },
+        "record_identifier": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "company_id", "action", "module", "timestamp"]
+    }
+  }
+}

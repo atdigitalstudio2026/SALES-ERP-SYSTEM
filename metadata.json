@@ -1,0 +1,6 @@
+{
+  "name": "Multi-Company Sales ERP",
+  "description": "Enterprise multi-entity sales order management, relational company structures, sales access controls, price lists, and consolidated financial reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
