@@ -48,6 +48,18 @@ class FirestoreSyncService {
     }
   }
 
+  async clearCollection(collectionName: string): Promise<void> {
+    try {
+      const colRef = collection(db, collectionName);
+      const snapshot = await getDocs(colRef);
+      for (const d of snapshot.docs) {
+        await deleteDoc(d.ref);
+      }
+    } catch (err) {
+      console.warn(`Firestore clearCollection error for ${collectionName}:`, err);
+    }
+  }
+
   /**
    * Initializes Firestore connection, bootstraps seed data if empty,
    * and sets up real-time onSnapshot listeners.
@@ -143,14 +155,12 @@ class FirestoreSyncService {
       onSnapshot(
         collection(db, name),
         (snapshot) => {
-          if (!snapshot.empty) {
-            const items = snapshot.docs.map((d) => d.data());
-            try {
-              localStorage.setItem(storageKey, JSON.stringify(items));
-              onDataChanged();
-            } catch (e) {
-              console.error(`Local sync error for ${name}:`, e);
-            }
+          const items = snapshot.docs.map((d) => d.data());
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(items));
+            onDataChanged();
+          } catch (e) {
+            console.error(`Local sync error for ${name}:`, e);
           }
         },
         (error) => {

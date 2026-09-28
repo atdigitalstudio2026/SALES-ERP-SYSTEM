@@ -13,6 +13,7 @@ import {
   Building2,
   Calendar,
   Download,
+  Upload,
   CheckCircle,
   CheckCircle2,
   Clock,
@@ -22,6 +23,7 @@ import {
   ShieldCheck,
   Crown,
 } from 'lucide-react';
+import { ImportOrdersModal } from './ImportOrdersModal';
 
 interface OrderListViewProps {
   onOpenCreateOrder: () => void;
@@ -50,6 +52,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Status distribution breakdown for quick visual badges
   const statusCounts = useMemo(() => {
@@ -281,8 +284,17 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-200/80 shadow-2xs cursor-pointer"
+              title="Impor file data transaksi penjualan lama (CSV/Excel) ke aplikasi"
+            >
+              <Upload className="w-3.5 h-3.5 text-blue-600" />
+              <span>Impor File (CSV)</span>
+            </button>
+
+            <button
               onClick={handleExportOrders}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg transition-colors border border-slate-200/80"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg transition-colors border border-slate-200/80 cursor-pointer"
               title="Unduh data tabel pesanan ke file CSV"
             >
               <Download className="w-3.5 h-3.5 text-slate-600" />
@@ -291,7 +303,7 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
 
             <button
               onClick={onOpenCreateOrder}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>+ Buat Sales Order</span>
@@ -587,6 +599,12 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modal: Impor File Sales Orders (Migrasi Data Lama) */}
+      <ImportOrdersModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </div>
   );
 };

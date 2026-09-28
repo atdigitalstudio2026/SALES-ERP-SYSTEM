@@ -206,3 +206,80 @@ export function exportOrdersToCSV(
 
   return exportToCSV(filename, orders, columns);
 }
+
+/**
+ * Generates and triggers download of a ready-to-fill Sales Order Import Template CSV
+ */
+export function downloadOrderImportTemplateCSV(): void {
+  const headers = [
+    'No_SO',
+    'Tanggal_Pesanan',
+    'Kode_PT',
+    'Kode_Sales',
+    'Nama_Pelanggan',
+    'Kode_Atau_Nama_Produk',
+    'Qty',
+    'Harga_Satuan',
+    'Diskon_Persen',
+    'Termin_Bayar',
+    'Status',
+    'Jumlah_Terbayar',
+    'Catatan',
+  ];
+
+  const sampleRows = [
+    [
+      'SO-20251101-0001',
+      '2025-11-01',
+      'EXA',
+      'SLS-001',
+      'PT Sentosa Jaya Makmur',
+      'Pupuk NPK Mutiara 16-16-16 50kg',
+      '50',
+      '875000',
+      '0',
+      'TOP 30 Hari',
+      'completed',
+      '43750000',
+      'Faktur migrasi data lama',
+    ],
+    [
+      'SO-20251101-0002',
+      '2025-11-02',
+      'EXA',
+      'SLS-001',
+      'CV Tani Subur Lestari',
+      'Urea Prill Non-Subsidi 50kg',
+      '100',
+      '525000',
+      '2.5',
+      'TOP 14 Hari',
+      'confirmed',
+      '0',
+      'Pesanan berjalan toko pertanian',
+    ],
+    [
+      'SO-20251105-0003',
+      '2025-11-05',
+      'SRAM',
+      'SLS-003',
+      'PT Agro Prima Nusantara',
+      'SP-36 Petro 50kg',
+      '80',
+      '340000',
+      '0',
+      'Cash',
+      'completed',
+      '27200000',
+      'Pelunasan tunai kasir',
+    ],
+  ];
+
+  const csvContent =
+    '\uFEFF' +
+    headers.join(',') +
+    '\r\n' +
+    sampleRows.map((r) => r.map((c) => escapeCSVValue(c, ',')).join(',')).join('\r\n');
+
+  downloadCSVFile('Template_Import_Sales_Orders.csv', csvContent);
+}

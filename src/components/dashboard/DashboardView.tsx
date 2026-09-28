@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { formatIDR, formatCompactIDR, formatDate } from '../../lib/currency';
 import {
@@ -12,9 +12,11 @@ import {
   ArrowRight,
   ShieldCheck,
   Crown,
+  RotateCcw,
 } from 'lucide-react';
 import { SalesOrder } from '../../types';
 import { MonthlyRevenueChart } from './MonthlyRevenueChart';
+import { ResetDataModal } from '../admin/ResetDataModal';
 
 interface DashboardViewProps {
   onOpenCreateOrder: () => void;
@@ -27,6 +29,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectOrder,
   onNavigateToTab,
 }) => {
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const {
     companies,
     filteredOrders,
@@ -155,6 +158,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {currentUser.role === 'super_admin' && (
+              <button
+                type="button"
+                onClick={() => setIsResetModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200/90 shadow-2xs transition-colors cursor-pointer"
+                title="Khusus Superadmin: Kosongkan seluruh data transaksi ke 0"
+              >
+                <RotateCcw className="w-4 h-4 text-rose-600" />
+                <span>Reset Transaksi ke Nol</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenCreateOrder}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
@@ -514,6 +529,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Superadmin Reset Modal */}
+      <ResetDataModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+      />
     </div>
   );
 };

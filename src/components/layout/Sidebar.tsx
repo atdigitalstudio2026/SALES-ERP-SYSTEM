@@ -15,6 +15,7 @@ import {
   Package,
   LogOut,
   UserCheck,
+  RotateCcw,
 } from 'lucide-react';
 
 export type NavigationTab =
@@ -33,12 +34,14 @@ interface SidebarProps {
   currentTab: NavigationTab;
   onTabChange: (tab: NavigationTab) => void;
   onOpenCreateOrder: () => void;
+  onOpenResetModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onTabChange,
   onOpenCreateOrder,
+  onOpenResetModal,
 }) => {
   const { currentUser, logout } = useERP();
 
@@ -189,6 +192,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <LogOut className="w-3.5 h-3.5" />
           <span>Keluar (Logout)</span>
         </button>
+
+        {isSuperAdmin && onOpenResetModal && (
+          <button
+            type="button"
+            onClick={onOpenResetModal}
+            className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-200 border border-rose-800/50 hover:border-rose-700/70 rounded-lg text-[11px] font-semibold transition-all cursor-pointer"
+            title="Reset data transaksi ke 0 untuk memulai sistem baru"
+          >
+            <RotateCcw className="w-3 h-3 text-rose-400" />
+            <span>Reset Transaksi ke Nol</span>
+          </button>
+        )}
       </div>
     </aside>
   );

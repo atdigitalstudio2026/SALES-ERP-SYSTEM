@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { Building2, ShieldCheck, UserCheck, Layers, RotateCcw, Edit3, CheckCircle, X, Shield, LogOut, KeyRound } from 'lucide-react';
+import { ResetDataModal } from '../admin/ResetDataModal';
 
 export const Header: React.FC = () => {
   const {
@@ -15,11 +16,11 @@ export const Header: React.FC = () => {
     setAllowMultiCompany,
     isFirebaseConnected,
     firebaseProjectId,
-    resetAllData,
     logout,
   } = useERP();
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [editName, setEditName] = useState(currentUser.name);
   const [editEmail, setEditEmail] = useState(currentUser.email);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -168,18 +169,19 @@ export const Header: React.FC = () => {
           <span className="hidden md:inline">Keluar</span>
         </button>
 
-        {/* Reset Demo Data Button */}
-        <button
-          onClick={() => {
-            if (confirm('Reset seluruh data transaksi dan katalog kembali ke data awal demo?')) {
-              resetAllData();
-            }
-          }}
-          title="Reset data ke data contoh awal"
-          className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
+        {/* Superadmin Reset Button: Kosongkan Transaksi ke Nol */}
+        {currentUser.role === 'super_admin' && (
+          <button
+            type="button"
+            onClick={() => setIsResetModalOpen(true)}
+            title="Khusus Superadmin: Reset seluruh data transaksi ke 0 untuk memulai sistem baru"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 border border-rose-200/90 hover:border-rose-300 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+            <span className="hidden sm:inline">Reset Transaksi ke Nol</span>
+            <span className="sm:hidden">Reset 0</span>
+          </button>
+        )}
       </div>
 
       {/* Modal: Edit Profil Pengguna / Super Admin */}
@@ -266,6 +268,12 @@ export const Header: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal: Reset Data Sistem (Khusus Superadmin) */}
+      <ResetDataModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+      />
     </header>
   );
 };

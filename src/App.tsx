@@ -17,6 +17,7 @@ import { OrderDetailModal } from './components/orders/OrderDetailModal';
 import { RecordPaymentModal } from './components/payments/RecordPaymentModal';
 import { InvoicePrintView } from './components/orders/InvoicePrintView';
 import { LoginView } from './components/auth/LoginView';
+import { ResetDataModal } from './components/admin/ResetDataModal';
 import { SalesOrder } from './types';
 
 const MainAppContent: React.FC = () => {
@@ -30,6 +31,7 @@ const MainAppContent: React.FC = () => {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<SalesOrder | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   const { orders, currentUser } = useERP();
 
@@ -78,6 +80,7 @@ const MainAppContent: React.FC = () => {
           currentTab={currentTab}
           onTabChange={setCurrentTab}
           onOpenCreateOrder={() => setIsCreateOrderOpen(true)}
+          onOpenResetModal={() => setIsResetModalOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 max-w-7xl mx-auto w-full">
@@ -172,6 +175,12 @@ const MainAppContent: React.FC = () => {
           }}
         />
       )}
+
+      {/* Global Superadmin Reset Modal */}
+      <ResetDataModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+      />
     </div>
   );
 };

@@ -1944,6 +1944,385 @@ class StorageService {
     return saved;
   }
 
+  /**
+   * Bulk import historical or legacy Sales Orders from parsed CSV/Excel rows
+   */
+  bulkImportSalesOrders(
+    rawRows: {
+      so_number?: string;
+      order_date?: string;
+      company_code?: string;
+      company_id?: string;
+      sales_code?: string;
+      sales_id?: string;
+      customer_name: string;
+      product_name_or_code: string;
+      quantity: number;
+      unit_price: number;
+      discount_percent?: number;
+      payment_terms?: string;
+      due_date?: string;
+      delivery_date?: string;
+      status?: string;
+      paid_amount?: number;
+      notes?: string;
+    }[],
+    options?: {
+      overwriteExisting?: boolean;
+      defaultCompanyId?: string;
+      defaultSalesId?: string;
+    }
+  ): {
+    createdOrders: number;
+    updatedOrders: number;
+    skippedOrders: number;
+    totalAmount: number;
+    createdPayments: number;
+    createdCustomers: number;
+    createdProducts: number;
+    errors: string[];
+  } {
+    const companies = this.getCompanies();
+    const salesList = this.getSales();
+    let customers = this.getCustomers();
+    let products = this.getProducts();
+    const orders = this.getSalesOrders();
+    const payments = this.getPayments();
+    const currentUser = this.getCurrentUser();
+
+    let createdOrders = 0;
+    let updatedOrders = 0;
+    let skippedOrders = 0;
+    let totalAmount = 0;
+    let createdPayments = 0;
+    let createdCustomers = 0;
+    let createdProducts = 0;
+    const errors: string[] = [];
+
+    // Group rows by SO Number or by (Customer + Date + Company) if SO Number is empty
+    const groups = new Map<string, typeof rawRows>();
+
+    rawRows.forEach((row, idx) => {
+      const cleanSONumber = (row.so_number || '').trim();
+      const groupKey = cleanSONumber
+        ? cleanSONumber.toUpperCase()
+        : `AUTOGROUP_${(row.customer_name || 'CUST').trim().toUpperCase()}_${row.order_date || 'TODAY'}_${idx}`;
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, []);
+      }
+      groups.get(groupKey)!.push(row);
+    });
+
+    const now = new Date().toISOString();
+
+    for (const [groupKey, rows] of groups.entries()) {
+      try {
+        const firstRow = rows[0];
+
+        // 1. Resolve Company
+        let companyId = options?.defaultCompanyId || '';
+        if (firstRow.company_id && companies.some((c) => c.company_id === firstRow.company_id)) {
+          companyId = firstRow.company_id;
+        } else if (firstRow.company_code) {
+          const compMatch = companies.find(
+            (c) =>
+              c.company_code.toLowerCase() === firstRow.company_code!.trim().toLowerCase() ||
+              c.company_name.toLowerCase().includes(firstRow.company_code!.trim().toLowerCase())
+          );
+          if (compMatch) companyId = compMatch.company_id;
+        }
+
+        if (!companyId) {
+          companyId = companies[0]?.company_id || '';
+        }
+        const company = companies.find((c) => c.company_id === companyId);
+        if (!company) {
+          errors.push(`Gagal memproses ${groupKey}: Perusahaan PT tidak ditemukan.`);
+          continue;
+        }
+
+        // 2. Resolve Sales Person
+        let salesId = options?.defaultSalesId || '';
+        if (currentUser.role === 'sales' && currentUser.sales_id) {
+          salesId = currentUser.sales_id;
+        } else if (firstRow.sales_id && salesList.some((s) => s.sales_id === firstRow.sales_id)) {
+          salesId = firstRow.sales_id;
+        } else if (firstRow.sales_code) {
+          const sMatch = salesList.find(
+            (s) =>
+              s.sales_code.toLowerCase() === firstRow.sales_code!.trim().toLowerCase() ||
+              s.sales_name.toLowerCase().includes(firstRow.sales_code!.trim().toLowerCase())
+          );
+          if (sMatch) salesId = sMatch.sales_id;
+        }
+
+        if (!salesId) {
+          salesId = salesList[0]?.sales_id || '';
+        }
+
+        // 3. Resolve Customer (Auto-Create if doesn't exist)
+        const cleanCustName = (firstRow.customer_name || 'Pelanggan Umum').trim();
+        let customer: Customer | undefined = customers.find(
+          (c) => c.customer_name.toLowerCase() === cleanCustName.toLowerCase()
+        );
+
+        if (!customer) {
+          customer = {
+            customer_id: generateUUID(),
+            customer_name: cleanCustName,
+            contact_person: cleanCustName,
+            email: '-',
+            phone: '-',
+            address: 'Alamat impor dari data transaksi lama',
+            customer_type: 'corporate',
+            created_at: now,
+          };
+          customers.push(customer);
+          this.set(STORAGE_KEYS.CUSTOMERS, customers);
+          firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.CUSTOMERS, customer.customer_id, customer);
+
+          // Link customer to company
+          this.saveCustomerCompany({
+            customer_id: customer.customer_id,
+            company_id: companyId,
+            customer_code: `CUST-${company.company_code}-${String(customers.length).padStart(3, '0')}`,
+            credit_limit: 100000000,
+            payment_terms: firstRow.payment_terms || 'TOP 30 Hari',
+            status: 'active',
+          });
+
+          createdCustomers++;
+        }
+
+        const validCustomer: Customer = customer;
+
+        // 4. Resolve Order Date & Dates
+        let orderDate = (firstRow.order_date || '').trim();
+        // If DD/MM/YYYY format, convert to YYYY-MM-DD
+        if (orderDate.includes('/')) {
+          const parts = orderDate.split('/');
+          if (parts.length === 3) {
+            if (parts[2].length === 4) {
+              orderDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+          }
+        }
+        if (!orderDate || isNaN(new Date(orderDate).getTime())) {
+          orderDate = new Date().toISOString().split('T')[0];
+        }
+
+        const paymentTerms = (firstRow.payment_terms || 'TOP 30 Hari').trim();
+        let dueDate = (firstRow.due_date || '').trim();
+        if (!dueDate || isNaN(new Date(dueDate).getTime())) {
+          const d = new Date(orderDate);
+          d.setDate(d.getDate() + 30);
+          dueDate = d.toISOString().split('T')[0];
+        }
+
+        const deliveryDate = (firstRow.delivery_date || dueDate).trim();
+        const notes = (firstRow.notes || 'Migrasi data pesanan lama').trim();
+
+        // 5. Build Items List
+        const items: SalesOrderItem[] = [];
+        const so_id = generateUUID();
+
+        for (const r of rows) {
+          const rawItemName = (r.product_name_or_code || 'Produk Standar').trim();
+          let product = products.find(
+            (p) =>
+              p.product_code.toLowerCase() === rawItemName.toLowerCase() ||
+              p.product_name.toLowerCase() === rawItemName.toLowerCase()
+          );
+
+          if (!product) {
+            // Auto-create product so migration doesn't fail
+            const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+            product = {
+              product_id: generateUUID(),
+              product_code: `PRD-${randSuffix}`,
+              product_name: rawItemName,
+              category: 'Hasil Impor',
+              unit: 'Pcs',
+              base_cost: Math.round((Number(r.unit_price) || 50000) * 0.8),
+              description: 'Otomatis dibuat saat impor data pesanan lama',
+            };
+            products.push(product);
+            this.set(STORAGE_KEYS.PRODUCTS, products);
+            firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.PRODUCTS, product.product_id, product);
+            createdProducts++;
+          }
+
+          const qty = Math.max(1, Number(r.quantity) || 1);
+          const price = Math.max(0, Number(r.unit_price) || product.base_cost * 1.25);
+          const disc = Math.min(100, Math.max(0, Number(r.discount_percent) || 0));
+          const subtotal = Math.round(qty * price * (1 - disc / 100));
+
+          items.push({
+            id: generateUUID(),
+            so_id,
+            product_id: product.product_id,
+            product_code: product.product_code,
+            product_name: product.product_name,
+            unit: product.unit || 'Pcs',
+            quantity: qty,
+            unit_price: price,
+            discount_percent: disc,
+            subtotal,
+            notes: r.notes || '',
+          });
+        }
+
+        const orderSubtotal = items.reduce((sum, it) => sum + it.subtotal, 0);
+        const orderTaxAmount = 0; // Default zero tax unless specified
+        const orderTotalAmount = orderSubtotal + orderTaxAmount;
+
+        // 6. Resolve Status & Paid Amount
+        let rawStatus = (firstRow.status || '').toLowerCase().trim();
+        let paidAmount = 0;
+
+        if (firstRow.paid_amount !== undefined && !isNaN(Number(firstRow.paid_amount))) {
+          paidAmount = Number(firstRow.paid_amount);
+        } else if (rawStatus === 'completed' || rawStatus === 'lunas' || rawStatus === 'paid') {
+          paidAmount = orderTotalAmount;
+        }
+
+        let status: SalesOrder['status'] = 'confirmed';
+        if (rawStatus === 'completed' || rawStatus === 'lunas' || paidAmount >= orderTotalAmount) {
+          status = 'completed';
+        } else if (rawStatus === 'cancelled' || rawStatus === 'batal') {
+          status = 'cancelled';
+        } else if (rawStatus === 'draft') {
+          status = 'draft';
+        } else if (rawStatus === 'processing' || rawStatus === 'proses') {
+          status = 'processing';
+        }
+
+        const outstandingAmount = Math.max(0, orderTotalAmount - paidAmount);
+
+        // 7. Resolve Final SO Number
+        const finalSONumber =
+          firstRow.so_number && !firstRow.so_number.startsWith('AUTOGROUP_')
+            ? firstRow.so_number.trim()
+            : this.generateNextSONumber(companyId, orderDate);
+
+        // Check if existing
+        const existingIdx = orders.findIndex(
+          (o) => o.so_number.toLowerCase() === finalSONumber.toLowerCase()
+        );
+
+        if (existingIdx !== -1) {
+          if (options?.overwriteExisting) {
+            const existing = orders[existingIdx];
+            const updated: SalesOrder = {
+              ...existing,
+              company_id: companyId,
+              sales_id: salesId,
+              customer_id: validCustomer.customer_id,
+              order_date: orderDate,
+              payment_terms: paymentTerms,
+              due_date: dueDate,
+              delivery_date: deliveryDate,
+              notes,
+              status,
+              subtotal: orderSubtotal,
+              tax_amount: orderTaxAmount,
+              total_amount: orderTotalAmount,
+              paid_amount: paidAmount,
+              outstanding_amount: outstandingAmount,
+              items: items.map((it) => ({ ...it, so_id: existing.so_id })),
+              updated_at: now,
+            };
+            orders[existingIdx] = updated;
+            firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.SALES_ORDERS, updated.so_id, updated);
+            updatedOrders++;
+            totalAmount += orderTotalAmount;
+          } else {
+            skippedOrders++;
+          }
+        } else {
+          const newOrder: SalesOrder = {
+            so_id,
+            so_number: finalSONumber,
+            company_id: companyId,
+            sales_id: salesId,
+            customer_id: validCustomer.customer_id,
+            order_date: orderDate,
+            payment_terms: paymentTerms,
+            due_date: dueDate,
+            delivery_date: deliveryDate,
+            notes,
+            status,
+            subtotal: orderSubtotal,
+            tax_enabled: false,
+            tax_rate: 0,
+            tax_amount: orderTaxAmount,
+            total_amount: orderTotalAmount,
+            paid_amount: paidAmount,
+            outstanding_amount: outstandingAmount,
+            items: items.map((it) => ({ ...it, so_id })),
+            created_at: now,
+            updated_at: now,
+          };
+
+          orders.unshift(newOrder);
+          firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.SALES_ORDERS, newOrder.so_id, newOrder);
+          createdOrders++;
+          totalAmount += orderTotalAmount;
+
+          // If paidAmount > 0, generate corresponding payment record
+          if (paidAmount > 0) {
+            const payNum = `PAY-${company.company_code}-${orderDate.replace(/-/g, '')}-${String(payments.length + 1).padStart(4, '0')}`;
+            const newPayment: Payment = {
+              payment_id: generateUUID(),
+              company_id: companyId,
+              so_id: newOrder.so_id,
+              so_number: newOrder.so_number,
+              payment_number: payNum,
+              payment_date: orderDate,
+              amount: paidAmount,
+              payment_method: 'bank_transfer',
+              reference_number: `MIGRASI-${finalSONumber}`,
+              bank_name: 'Bank Rekening Holding',
+              notes: `Pencatatan pembayaran impor data lama (${finalSONumber})`,
+              created_at: now,
+            };
+            payments.unshift(newPayment);
+            firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.PAYMENTS, newPayment.payment_id, newPayment);
+            createdPayments++;
+          }
+        }
+      } catch (err: any) {
+        errors.push(`Error pada pesanan ${groupKey}: ${err.message}`);
+      }
+    }
+
+    // Save final sets
+    this.set(STORAGE_KEYS.SALES_ORDERS, orders);
+    this.set(STORAGE_KEYS.PAYMENTS, payments);
+
+    this.addAuditLog({
+      company_id: 'ALL',
+      company_code: 'GRP',
+      action: 'CREATE',
+      module: 'SALES_ORDER',
+      record_id: 'BULK_IMPORT',
+      record_identifier: 'IMPORT_FILE',
+      description: `${currentUser.name} | BULK_IMPORT | SALES_ORDER | Berhasil mengimpor ${createdOrders} pesanan baru, ${updatedOrders} diperbarui, ${skippedOrders} dilewati`,
+    });
+
+    return {
+      createdOrders,
+      updatedOrders,
+      skippedOrders,
+      totalAmount,
+      createdPayments,
+      createdCustomers,
+      createdProducts,
+      errors,
+    };
+  }
+
   // Payments (Requirement #10: company_id strictly from Sales Order)
   getPayments(): Payment[] {
     return this.get<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
@@ -2055,19 +2434,105 @@ class StorageService {
     return newLog;
   }
 
+  // Reset transactions to 0 for production fresh start
+  async resetTransactionsToZero(): Promise<{ ordersCount: number; paymentsCount: number }> {
+    const prevOrders = this.getSalesOrders().length;
+    const prevPayments = this.getPayments().length;
+
+    // 1. Set orders and payments to empty array []
+    this.set(STORAGE_KEYS.SALES_ORDERS, []);
+    this.set(STORAGE_KEYS.PAYMENTS, []);
+
+    // 2. Add an authoritative system audit log
+    const currentUser = this.getCurrentUser();
+    const resetLog: AuditLog = {
+      id: generateUUID(),
+      company_id: 'ALL',
+      company_code: 'GRP',
+      user_id: currentUser.user_id,
+      user_name: currentUser.name.toUpperCase().split(' ')[0],
+      role: currentUser.role,
+      action: 'DELETE',
+      module: 'SALES_ORDER',
+      record_id: 'SYSTEM_RESET',
+      record_identifier: 'RESET-TRX-0',
+      timestamp: new Date().toISOString(),
+      description: `Superadmin (${currentUser.name}) mengosongkan seluruh data transaksi (${prevOrders} pesanan & ${prevPayments} pembayaran) menjadi 0 untuk memulai sistem baru dari awal.`,
+    };
+    this.set(STORAGE_KEYS.AUDIT_LOGS, [resetLog]);
+
+    // 3. Clear from Firestore if connected
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.SALES_ORDERS);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.PAYMENTS);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.AUDIT_LOGS);
+    await firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.AUDIT_LOGS, resetLog.id, resetLog);
+
+    return { ordersCount: prevOrders, paymentsCount: prevPayments };
+  }
+
+  // Reset total: clear all transactions, customers, products, and price lists
+  async resetTotalToZero(): Promise<void> {
+    this.set(STORAGE_KEYS.SALES_ORDERS, []);
+    this.set(STORAGE_KEYS.PAYMENTS, []);
+    this.set(STORAGE_KEYS.CUSTOMERS, []);
+    this.set(STORAGE_KEYS.CUSTOMER_COMPANIES, []);
+    this.set(STORAGE_KEYS.PRODUCTS, []);
+    this.set(STORAGE_KEYS.PRICE_LISTS, []);
+
+    const currentUser = this.getCurrentUser();
+    const resetLog: AuditLog = {
+      id: generateUUID(),
+      company_id: 'ALL',
+      company_code: 'GRP',
+      user_id: currentUser.user_id,
+      user_name: currentUser.name.toUpperCase().split(' ')[0],
+      role: currentUser.role,
+      action: 'DELETE',
+      module: 'ACCESS_CONTROL',
+      record_id: 'SYSTEM_RESET_TOTAL',
+      record_identifier: 'RESET-TOTAL-0',
+      timestamp: new Date().toISOString(),
+      description: `Superadmin (${currentUser.name}) melakukan reset total sistem ke 0. Seluruh transaksi, pelanggan, produk, dan harga dikosongkan.`,
+    };
+    this.set(STORAGE_KEYS.AUDIT_LOGS, [resetLog]);
+
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.SALES_ORDERS);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.PAYMENTS);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.CUSTOMERS);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.CUSTOMER_COMPANIES);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.PRODUCTS);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.PRICE_LISTS);
+    await firestoreSync.clearCollection(FIRESTORE_COLLECTIONS.AUDIT_LOGS);
+    await firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.AUDIT_LOGS, resetLog.id, resetLog);
+  }
+
+  // Restore sample demo data
+  async restoreDemoData(): Promise<void> {
+    this.set(STORAGE_KEYS.COMPANIES, INITIAL_COMPANIES);
+    this.set(STORAGE_KEYS.SALES, INITIAL_SALES);
+    this.set(STORAGE_KEYS.SALES_ACCESS, INITIAL_SALES_ACCESS);
+    this.set(STORAGE_KEYS.CUSTOMERS, INITIAL_CUSTOMERS);
+    this.set(STORAGE_KEYS.CUSTOMER_COMPANIES, INITIAL_CUSTOMER_COMPANIES);
+    this.set(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    this.set(STORAGE_KEYS.PRICE_LISTS, INITIAL_PRICE_LISTS);
+    this.set(STORAGE_KEYS.SALES_ORDERS, INITIAL_ORDERS);
+    this.set(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    this.set(STORAGE_KEYS.AUDIT_LOGS, INITIAL_AUDIT_LOGS);
+
+    for (const order of INITIAL_ORDERS) {
+      await firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.SALES_ORDERS, order.so_id, order);
+    }
+    for (const pay of INITIAL_PAYMENTS) {
+      await firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.PAYMENTS, pay.payment_id, pay);
+    }
+    for (const log of INITIAL_AUDIT_LOGS) {
+      await firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.AUDIT_LOGS, log.id, log);
+    }
+  }
+
   // Reset to sample initial state
   resetAllData(): void {
-    localStorage.removeItem(STORAGE_KEYS.COMPANIES);
-    localStorage.removeItem(STORAGE_KEYS.SALES);
-    localStorage.removeItem(STORAGE_KEYS.SALES_ACCESS);
-    localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
-    localStorage.removeItem(STORAGE_KEYS.CUSTOMER_COMPANIES);
-    localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
-    localStorage.removeItem(STORAGE_KEYS.PRICE_LISTS);
-    localStorage.removeItem(STORAGE_KEYS.SALES_ORDERS);
-    localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
-    localStorage.removeItem(STORAGE_KEYS.AUDIT_LOGS);
-    localStorage.removeItem(STORAGE_KEYS.SETTINGS);
+    this.restoreDemoData();
   }
 }
 

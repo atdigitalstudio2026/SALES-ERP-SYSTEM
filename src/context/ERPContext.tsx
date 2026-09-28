@@ -76,9 +76,16 @@ interface ERPContextType {
     items: Parameters<typeof storage.bulkImportProducts>[0],
     overwriteExisting?: boolean
   ) => { created: number; updated: number; skipped: number };
+  bulkImportSalesOrders: (
+    rows: Parameters<typeof storage.bulkImportSalesOrders>[0],
+    options?: Parameters<typeof storage.bulkImportSalesOrders>[1]
+  ) => ReturnType<typeof storage.bulkImportSalesOrders>;
   savePriceList: (data: Parameters<typeof storage.savePriceList>[0]) => PriceList;
   resolvePrice: (companyId: string, productId: string, customerType?: string, customerId?: string, qty?: number) => number;
   resetAllData: () => void;
+  resetTransactionsToZero: () => Promise<{ ordersCount: number; paymentsCount: number }>;
+  resetTotalToZero: () => Promise<void>;
+  restoreDemoData: () => Promise<void>;
   refreshData: () => void;
 }
 
@@ -401,8 +408,33 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return storage.resolveProductPrice(companyId, productId, customerType, customerId, qty);
   };
 
+  const bulkImportSalesOrders = (
+    rows: Parameters<typeof storage.bulkImportSalesOrders>[0],
+    options?: Parameters<typeof storage.bulkImportSalesOrders>[1]
+  ) => {
+    const result = storage.bulkImportSalesOrders(rows, options);
+    loadData();
+    return result;
+  };
+
   const resetAllData = () => {
     storage.resetAllData();
+    loadData();
+  };
+
+  const resetTransactionsToZero = async () => {
+    const result = await storage.resetTransactionsToZero();
+    loadData();
+    return result;
+  };
+
+  const resetTotalToZero = async () => {
+    await storage.resetTotalToZero();
+    loadData();
+  };
+
+  const restoreDemoData = async () => {
+    await storage.restoreDemoData();
     loadData();
   };
 
@@ -451,9 +483,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveProduct,
         deleteProduct,
         bulkImportProducts,
+        bulkImportSalesOrders,
         savePriceList,
         resolvePrice,
         resetAllData,
+        resetTransactionsToZero,
+        resetTotalToZero,
+        restoreDemoData,
         refreshData: loadData,
       }}
     >
