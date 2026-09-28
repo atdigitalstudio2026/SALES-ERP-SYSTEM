@@ -19,6 +19,8 @@ import {
   XCircle,
   RotateCw,
   X,
+  ShieldCheck,
+  Crown,
 } from 'lucide-react';
 
 interface OrderListViewProps {
@@ -229,12 +231,52 @@ export const OrderListView: React.FC<OrderListViewProps> = ({
       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Daftar Sales Orders
-            </h1>
-            <p className="text-xs text-slate-500 mt-1">
-              Daftar transaksi penjualan multi-entitas dengan penomoran otomatis dan validasi status pelunasan.
-            </p>
+            {currentUser.role === 'sales' ? (
+              <>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] uppercase font-bold text-blue-600 tracking-wider">
+                    Transaksi Penjualan Saya
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 inline-flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-blue-600" />
+                    <span>Akses Pribadi Terisolasi</span>
+                  </span>
+                </div>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                  Daftar Sales Orders - {currentUser.name}
+                </h1>
+                <p className="text-xs text-slate-500 mt-1">
+                  Hanya menampilkan transaksi penjualan milik Anda sendiri sesuai hak akses yang diberikan Superadmin.
+                </p>
+              </>
+            ) : currentUser.role === 'super_admin' ? (
+              <>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] uppercase font-bold text-purple-600 tracking-wider">
+                    Akses Penuh Superadmin
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 inline-flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-purple-600" />
+                    <span>Semua Sales & Seluruh Entitas PT</span>
+                  </span>
+                </div>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                  Daftar Seluruh Sales Orders
+                </h1>
+                <p className="text-xs text-slate-500 mt-1">
+                  Daftar seluruh transaksi penjualan dari seluruh tim sales lintas anak perusahaan (EXA, SRAM, IMR, PAS).
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                  Daftar Sales Orders
+                </h1>
+                <p className="text-xs text-slate-500 mt-1">
+                  Daftar transaksi penjualan multi-entitas dengan penomoran otomatis dan validasi status pelunasan.
+                </p>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

@@ -29,6 +29,7 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'multi_company_erp_current_user_v1',
   USER_PERSONAS: 'multi_company_erp_user_personas_v1',
   SETTINGS: 'multi_company_erp_settings_v1',
+  IS_LOGGED_IN: 'multi_company_erp_is_logged_in_v1',
 };
 
 // Initial 4 companies required by specification
@@ -87,7 +88,7 @@ export const INITIAL_COMPANIES: Company[] = [
   },
 ];
 
-// Initial Sales Reps
+// Initial Sales Reps with Access Credentials given by Superadmin
 export const INITIAL_SALES: SalesPerson[] = [
   {
     sales_id: 's1111111-1111-1111-1111-111111111111',
@@ -99,6 +100,8 @@ export const INITIAL_SALES: SalesPerson[] = [
     area: 'DKI Jakarta & Banten',
     position: 'Senior Key Account Manager',
     status: 'active',
+    access_code: 'SLS-001',
+    password: 'andi123',
     created_at: '2025-01-16T08:00:00.000Z',
   },
   {
@@ -111,6 +114,8 @@ export const INITIAL_SALES: SalesPerson[] = [
     area: 'Jawa Timur & Bali',
     position: 'Regional Sales Officer',
     status: 'active',
+    access_code: 'SLS-002',
+    password: 'budi123',
     created_at: '2025-02-05T08:00:00.000Z',
   },
   {
@@ -123,6 +128,8 @@ export const INITIAL_SALES: SalesPerson[] = [
     area: 'Jawa Tengah & DIY',
     position: 'Agro Sales Executive',
     status: 'active',
+    access_code: 'SLS-003',
+    password: 'dewi123',
     created_at: '2025-02-15T08:00:00.000Z',
   },
   {
@@ -135,6 +142,8 @@ export const INITIAL_SALES: SalesPerson[] = [
     area: 'Jawa Barat & Bodetabek',
     position: 'Commercial Representative',
     status: 'active',
+    access_code: 'SLS-004',
+    password: 'rian123',
     created_at: '2025-02-20T08:00:00.000Z',
   },
 ];
@@ -885,12 +894,14 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
   },
 ];
 
-// Current User personas for role simulation & RLS testing
+// Current User personas for role simulation, authentication & RLS access control
 export const USER_PERSONAS: CurrentUser[] = [
   {
     user_id: 'u-superadmin',
-    name: 'Pratama Hartono',
+    name: 'Pratama Hartono (Superadmin)',
     email: 'hartono@group-holding.com',
+    username: 'superadmin',
+    password: 'admin123',
     role: 'super_admin',
     allowed_company_ids: [
       'c1111111-1111-1111-1111-111111111111',
@@ -904,6 +915,8 @@ export const USER_PERSONAS: CurrentUser[] = [
     user_id: 'u-admin',
     name: 'Admin Group Sales',
     email: 'admin.sales@holding.co.id',
+    username: 'admin',
+    password: 'admin123',
     role: 'admin',
     allowed_company_ids: [
       'c1111111-1111-1111-1111-111111111111',
@@ -917,6 +930,8 @@ export const USER_PERSONAS: CurrentUser[] = [
     user_id: 'u-finance',
     name: 'Kartika Sari (Finance)',
     email: 'finance@holding.co.id',
+    username: 'finance',
+    password: 'finance123',
     role: 'finance',
     allowed_company_ids: [
       'c1111111-1111-1111-1111-111111111111',
@@ -931,6 +946,8 @@ export const USER_PERSONAS: CurrentUser[] = [
     user_id: 'u-andi',
     name: 'Andi Wijaya (Sales EXA & SRAM)',
     email: 'andi.wijaya@exindokarsa.co.id',
+    username: 'SLS-001',
+    password: 'andi123',
     role: 'sales',
     sales_id: 's1111111-1111-1111-1111-111111111111',
     company_id: 'c1111111-1111-1111-1111-111111111111', // PT Exindokarsa Agung
@@ -938,18 +955,51 @@ export const USER_PERSONAS: CurrentUser[] = [
       'c1111111-1111-1111-1111-111111111111', // EXA
       'c2222222-2222-2222-2222-222222222222', // SRAM
     ],
-    allow_multi_company: true, // Will test ALLOW_MULTI_COMPANY
+    allow_multi_company: true,
   },
   {
     // Budi: Only IMR
     user_id: 'u-budi',
     name: 'Budi Santoso (Sales IMR Only)',
     email: 'budi.santoso@indomegahraya.com',
+    username: 'SLS-002',
+    password: 'budi123',
     role: 'sales',
     sales_id: 's2222222-2222-2222-2222-222222222222',
     company_id: 'c3333333-3333-3333-3333-333333333333', // IMR
     allowed_company_ids: [
       'c3333333-3333-3333-3333-333333333333', // IMR
+    ],
+    allow_multi_company: false,
+  },
+  {
+    // Dewi: SRAM default, PAS access
+    user_id: 'u-dewi',
+    name: 'Dewi Lestari (Sales SRAM & PAS)',
+    email: 'dewi.lestari@sumber-roso.co.id',
+    username: 'SLS-003',
+    password: 'dewi123',
+    role: 'sales',
+    sales_id: 's3333333-3333-3333-3333-333333333333',
+    company_id: 'c2222222-2222-2222-2222-222222222222', // SRAM
+    allowed_company_ids: [
+      'c2222222-2222-2222-2222-222222222222', // SRAM
+      'c4444444-4444-4444-4444-444444444444', // PAS
+    ],
+    allow_multi_company: true,
+  },
+  {
+    // Rian: Only PAS
+    user_id: 'u-rian',
+    name: 'Rian Pratama (Sales PAS Only)',
+    email: 'rian.pratama@pelangiagro.co.id',
+    username: 'SLS-004',
+    password: 'rian123',
+    role: 'sales',
+    sales_id: 's4444444-4444-4444-4444-444444444444',
+    company_id: 'c4444444-4444-4444-4444-444444444444', // PAS
+    allowed_company_ids: [
+      'c4444444-4444-4444-4444-444444444444', // PAS
     ],
     allow_multi_company: false,
   },
@@ -1004,7 +1054,213 @@ class StorageService {
 
   // Current User & Personas
   getUserPersonas(): CurrentUser[] {
-    return this.get<CurrentUser[]>(STORAGE_KEYS.USER_PERSONAS, USER_PERSONAS);
+    const raw = this.get<CurrentUser[]>(STORAGE_KEYS.USER_PERSONAS, USER_PERSONAS);
+    let hasChanges = false;
+
+    // Ensure all personas have username and password
+    const mapped = raw.map((p) => {
+      const defaultMatch = USER_PERSONAS.find((def) => def.user_id === p.user_id || def.sales_id === p.sales_id);
+      let changed = false;
+      const copy = { ...p };
+      if (!copy.username && defaultMatch?.username) {
+        copy.username = defaultMatch.username;
+        changed = true;
+      }
+      if (!copy.password && defaultMatch?.password) {
+        copy.password = defaultMatch.password;
+        changed = true;
+      }
+      if (changed) hasChanges = true;
+      return copy;
+    });
+
+    // Ensure all sales from initial / saved list are represented as a user persona
+    const allSales = this.getSales();
+    allSales.forEach((s) => {
+      if (!mapped.some((p) => p.sales_id === s.sales_id)) {
+        const defaultMatch = USER_PERSONAS.find((def) => def.sales_id === s.sales_id);
+        mapped.push({
+          user_id: defaultMatch?.user_id || 'u-' + s.sales_code.toLowerCase(),
+          name: s.sales_name,
+          email: s.email,
+          username: s.access_code || defaultMatch?.username || s.sales_code,
+          password: s.password || defaultMatch?.password || 'sales123',
+          role: 'sales',
+          sales_id: s.sales_id,
+          company_id: s.company_id,
+          allowed_company_ids: [s.company_id],
+          allow_multi_company: false,
+        });
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      this.set(STORAGE_KEYS.USER_PERSONAS, mapped);
+    }
+    return mapped;
+  }
+
+  isLoggedIn(): boolean {
+    const val = localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
+    return val === 'true';
+  }
+
+  setLoggedIn(status: boolean): void {
+    localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN, status ? 'true' : 'false');
+  }
+
+  authenticate(
+    usernameOrCode: string,
+    passwordInput: string
+  ): { success: boolean; user?: CurrentUser; error?: string } {
+    const cleanUsername = usernameOrCode.trim().toLowerCase();
+    const cleanPassword = passwordInput.trim();
+
+    if (!cleanUsername) {
+      return { success: false, error: 'Silakan masukkan Kode Akses atau Username.' };
+    }
+    if (!cleanPassword) {
+      return { success: false, error: 'Silakan masukkan Password.' };
+    }
+
+    const personas = this.getUserPersonas();
+    // Search by username, access code, email, sales_code, or user_id
+    const user = personas.find(
+      (u) =>
+        (u.username && u.username.toLowerCase() === cleanUsername) ||
+        (u.email && u.email.toLowerCase() === cleanUsername) ||
+        (u.user_id && u.user_id.toLowerCase() === cleanUsername)
+    );
+
+    if (!user) {
+      // Check sales list directly
+      const salesList = this.getSales();
+      const matchedSales = salesList.find(
+        (s) =>
+          (s.access_code && s.access_code.toLowerCase() === cleanUsername) ||
+          (s.sales_code && s.sales_code.toLowerCase() === cleanUsername) ||
+          (s.email && s.email.toLowerCase() === cleanUsername)
+      );
+
+      if (matchedSales) {
+        const expectedPwd = matchedSales.password || 'sales123';
+        if (expectedPwd !== cleanPassword) {
+          return { success: false, error: 'Password salah untuk akun sales tersebut.' };
+        }
+        const synced = this.syncSalesToPersona(matchedSales);
+        this.setCurrentUser(synced);
+        this.setLoggedIn(true);
+        return { success: true, user: synced };
+      }
+
+      return {
+        success: false,
+        error: `Kode akses atau username "${usernameOrCode}" tidak terdaftar. Hubungi Superadmin.`,
+      };
+    }
+
+    const expectedPassword =
+      user.password ||
+      (user.role === 'super_admin' || user.role === 'admin' ? 'admin123' : 'sales123');
+
+    if (expectedPassword !== cleanPassword) {
+      return {
+        success: false,
+        error: 'Password salah. Pastikan huruf besar/kecil sesuai atau hubungi Superadmin.',
+      };
+    }
+
+    this.setCurrentUser(user);
+    this.setLoggedIn(true);
+    this.addAuditLog({
+      company_id: user.company_id || 'ALL',
+      company_code: 'GRP',
+      action: 'STATUS_CHANGE',
+      module: 'ACCESS_CONTROL',
+      record_id: user.user_id,
+      record_identifier: user.username || user.name,
+      description: `Pengguna "${user.name}" (${user.role.toUpperCase()}) berhasil login ke sistem`,
+    });
+
+    return { success: true, user };
+  }
+
+  logout(): void {
+    this.setLoggedIn(false);
+  }
+
+  syncSalesToPersona(sales: SalesPerson): CurrentUser {
+    const personas = this.getUserPersonas();
+    const existingIdx = personas.findIndex((p) => p.sales_id === sales.sales_id);
+    const accesses = this.getSalesCompanyAccess().filter(
+      (a) => a.sales_id === sales.sales_id && a.status === 'active'
+    );
+    const allowedCompIds =
+      accesses.length > 0 ? accesses.map((a) => a.company_id) : [sales.company_id];
+
+    const persona: CurrentUser = {
+      user_id:
+        existingIdx !== -1
+          ? personas[existingIdx].user_id
+          : 'u-' + (sales.sales_code || generateUUID()).toLowerCase(),
+      name: sales.sales_name,
+      email: sales.email,
+      username: sales.access_code || sales.sales_code,
+      password: sales.password || 'sales123',
+      role: 'sales',
+      sales_id: sales.sales_id,
+      company_id: sales.company_id,
+      allowed_company_ids: allowedCompIds,
+      allow_multi_company: accesses.length > 1,
+    };
+
+    if (existingIdx !== -1) {
+      personas[existingIdx] = persona;
+    } else {
+      personas.push(persona);
+    }
+    this.set(STORAGE_KEYS.USER_PERSONAS, personas);
+
+    const currentUser = this.getCurrentUser();
+    if (currentUser.sales_id === sales.sales_id) {
+      this.setCurrentUser(persona);
+    }
+
+    return persona;
+  }
+
+  updateSalesCredentials(
+    salesId: string,
+    accessCode: string,
+    passwordInput: string
+  ): SalesPerson {
+    const salesList = this.getSales();
+    const idx = salesList.findIndex((s) => s.sales_id === salesId);
+    if (idx === -1) throw new Error('Sales person tidak ditemukan');
+
+    salesList[idx] = {
+      ...salesList[idx],
+      access_code: accessCode.trim().toUpperCase(),
+      password: passwordInput.trim(),
+    };
+    this.set(STORAGE_KEYS.SALES, salesList);
+    firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.SALES, salesId, salesList[idx]);
+
+    this.syncSalesToPersona(salesList[idx]);
+
+    const comp = this.getCompanyById(salesList[idx].company_id);
+    this.addAuditLog({
+      company_id: salesList[idx].company_id,
+      company_code: comp?.company_code || 'GRP',
+      action: 'UPDATE',
+      module: 'ACCESS_CONTROL',
+      record_id: salesId,
+      record_identifier: salesList[idx].sales_code,
+      description: `Superadmin memperbarui kredensial login (User: ${accessCode}) untuk sales ${salesList[idx].sales_name}`,
+    });
+
+    return salesList[idx];
   }
 
   updateUserPersona(userId: string, data: { name?: string; email?: string }): CurrentUser {
@@ -1169,6 +1425,7 @@ class StorageService {
 
     this.set(STORAGE_KEYS.SALES, salesList);
     firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.SALES, saved.sales_id, saved);
+    this.syncSalesToPersona(saved);
     const comp = this.getCompanyById(saved.company_id);
     this.addAuditLog({
       company_id: saved.company_id,

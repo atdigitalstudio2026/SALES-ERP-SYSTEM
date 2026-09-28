@@ -10,6 +10,8 @@ import {
   ArrowUpRight,
   Plus,
   ArrowRight,
+  ShieldCheck,
+  Crown,
 } from 'lucide-react';
 import { SalesOrder } from '../../types';
 import { MonthlyRevenueChart } from './MonthlyRevenueChart';
@@ -83,25 +85,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              <span>Konsolidasi Penjualan Grup</span>
-              <span aria-hidden="true">·</span>
-              <span>
-                {selectedCompanyId === 'ALL'
-                  ? 'Seluruh Anak Perusahaan Holding'
-                  : selectedCompany?.company_name}
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {selectedCompanyId === 'ALL'
-                ? 'Dashboard Penjualan Konsolidasian'
-                : `${selectedCompany?.company_name} (${selectedCompany?.company_code})`}
-            </h1>
-            <p className="text-xs text-slate-600 mt-1">
-              {selectedCompanyId === 'ALL'
-                ? 'Pemantauan performa transaksi, realisasi pembayaran, dan saldo piutang berjalan across holding.'
-                : `NPWP Resmi: ${selectedCompany?.tax_number} · Alamat: ${selectedCompany?.address}`}
-            </p>
+            {currentUser.role === 'sales' ? (
+              <>
+                <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">
+                  <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 px-2 py-0.5 rounded font-bold text-[10px]">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Dashboard Sales Pribadi</span>
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-slate-500 font-medium">
+                    {selectedCompanyId === 'ALL'
+                      ? 'Semua PT Yang Diizinkan'
+                      : selectedCompany?.company_name}
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  Dashboard Penjualan - {currentUser.name}
+                </h1>
+                <p className="text-xs text-slate-600 mt-1">
+                  Data analitik, grafik pendapatan, dan transaksi di bawah ini terisolasi hanya untuk performa penjualan Anda sendiri.
+                </p>
+              </>
+            ) : currentUser.role === 'super_admin' ? (
+              <>
+                <div className="flex items-center gap-2 text-xs font-semibold text-purple-700 uppercase tracking-wider mb-1">
+                  <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-800 px-2 py-0.5 rounded font-bold text-[10px]">
+                    <Crown className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Mode Superadmin (Full Access)</span>
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-slate-500 font-medium">
+                    {selectedCompanyId === 'ALL'
+                      ? 'Seluruh Anak Perusahaan Holding'
+                      : selectedCompany?.company_name}
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  {selectedCompanyId === 'ALL'
+                    ? 'Dashboard Penjualan Konsolidasian Holding'
+                    : `${selectedCompany?.company_name} (${selectedCompany?.company_code})`}
+                </h1>
+                <p className="text-xs text-slate-600 mt-1">
+                  Akses penuh ke seluruh transaksi penjualan, tim sales, dan 4 legal entity (EXA, SRAM, IMR, PAS).
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  <span>Konsolidasi Penjualan Grup</span>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    {selectedCompanyId === 'ALL'
+                      ? 'Seluruh Anak Perusahaan Holding'
+                      : selectedCompany?.company_name}
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  {selectedCompanyId === 'ALL'
+                    ? 'Dashboard Penjualan Konsolidasian'
+                    : `${selectedCompany?.company_name} (${selectedCompany?.company_code})`}
+                </h1>
+                <p className="text-xs text-slate-600 mt-1">
+                  {selectedCompanyId === 'ALL'
+                    ? 'Pemantauan performa transaksi, realisasi pembayaran, dan saldo piutang berjalan across holding.'
+                    : `NPWP Resmi: ${selectedCompany?.tax_number} · Alamat: ${selectedCompany?.address}`}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

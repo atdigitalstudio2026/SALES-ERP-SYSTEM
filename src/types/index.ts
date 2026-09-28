@@ -26,6 +26,8 @@ export interface SalesPerson {
   area: string;
   position: string;
   status: SalesStatus;
+  access_code?: string; // Login User / Kode Akses e.g. SLS-001 or custom username
+  password?: string; // Login Password given by Superadmin
   created_at: string;
 }
 
@@ -166,6 +168,8 @@ export interface CurrentUser {
   user_id: string;
   name: string;
   email: string;
+  username?: string; // Login Kode Akses / Username
+  password?: string; // Login Password
   role: UserRole;
   sales_id?: string; // If role === 'sales'
   company_id?: string; // Primary registered company UUID

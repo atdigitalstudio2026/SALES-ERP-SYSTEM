@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useERP } from '../../context/ERPContext';
 import {
   LayoutDashboard,
@@ -13,6 +13,8 @@ import {
   Shield,
   PlusCircle,
   Package,
+  LogOut,
+  UserCheck,
 } from 'lucide-react';
 
 export type NavigationTab =
@@ -38,36 +40,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTabChange,
   onOpenCreateOrder,
 }) => {
-  const { currentUser } = useERP();
+  const { currentUser, logout } = useERP();
 
-  const navGroups: {
-    title: string;
-    items: { id: NavigationTab; label: string; icon: React.ElementType }[];
-  }[] = [
-    {
-      title: 'Operasional',
-      items: [
-        { id: 'dashboard', label: 'Dashboard & Analitik', icon: LayoutDashboard },
-        { id: 'orders', label: 'Sales Orders', icon: FileText },
-        { id: 'payments', label: 'Pembayaran & Piutang', icon: CreditCard },
-        { id: 'reports', label: 'Laporan Konsolidasi', icon: BarChart3 },
-      ],
-    },
-    {
-      title: 'Master Data',
-      items: [
-        { id: 'products', label: 'Master Produk (Katalog)', icon: Package },
-        { id: 'companies', label: 'Anak Perusahaan (PT)', icon: Building2 },
-        { id: 'sales-access', label: 'Tim Sales & Akses PT', icon: Users2 },
-        { id: 'customers', label: 'Pelanggan & Termin', icon: Briefcase },
-        { id: 'price-lists', label: 'Daftar Harga Jual PT', icon: Tag },
-      ],
-    },
-    {
-      title: 'Sistem & Keamanan',
-      items: [{ id: 'audit', label: 'Audit Trail Aktivitas', icon: History }],
-    },
-  ];
+  const isSuperAdmin = currentUser.role === 'super_admin';
+  const isAdmin = currentUser.role === 'admin' || isSuperAdmin;
+  const isSales = currentUser.role === 'sales';
+
+  const navGroups = useMemo(() => {
+    const operationalItems: { id: NavigationTab; label: string; icon: React.ElementType }[] = [
+      {
+        id: 'dashboard',
+        label: isSales ? 'Dashboard Saya' : 'Dashboard & Analitik',
+        icon: LayoutDashboard,
+      },
+      {
+        id: 'orders',
+        label: isSales ? 'Transaksi Saya (SO)' : 'Sales Orders',
+        icon: FileText,
+      },
+      {
+        id: 'payments',
+        label: isSales ? 'Pembayaran Saya' : 'Pembayaran & Piutang',
+        icon: CreditCard,
+      },
+    ];
+
+    if (!isSales) {
+      operationalItems.push({ id: 'reports', label: 'Laporan Konsolidasi', icon: BarChart3 });
+    }
+
+    const masterItems: { id: NavigationTab; label: string; icon: React.ElementType }[] = [
+      { id: 'products', label: 'Master Produk (Katalog)', icon: Package },
+    ];
+
+    if (isAdmin) {
+      masterItems.push({ id: 'companies', label: 'Anak Perusahaan (PT)', icon: Building2 });
+      masterItems.push({ id: 'sales-access', label: 'Tim Sales & Akses PT', icon: Users2 });
+    }
+
+    masterItems.push({ id: 'customers', label: 'Pelanggan & Termin', icon: Briefcase });
+    masterItems.push({ id: 'price-lists', label: 'Daftar Harga Jual PT', icon: Tag });
+
+    const groups: {
+      title: string;
+      items: { id: NavigationTab; label: string; icon: React.ElementType }[];
+    }[] = [
+      {
+        title: 'Operasional',
+        items: operationalItems,
+      },
+      {
+        title: 'Master Data',
+        items: masterItems,
+      },
+    ];
+
+    if (isAdmin) {
+      groups.push({
+        title: 'Sistem & Keamanan',
+        items: [{ id: 'audit', label: 'Audit Trail Aktivitas', icon: History }],
+      });
+    }
+
+    return groups;
+  }, [isAdmin, isSales]);
 
   return (
     <aside className="no-print w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 min-h-[calc(100vh-4rem)] border-r border-slate-800">
@@ -111,16 +147,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </nav>
 
-      {/* Bottom Session Box */}
-      <div className="p-4 border-t border-slate-800/80 bg-slate-950/50 text-xs">
-        <div className="flex items-center gap-2 mb-1.5">
-          <Shield className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="font-semibold text-slate-200 text-[11px]">Sesi Login Aman</span>
+      {/* Bottom Session Box with Logout */}
+      <div className="p-4 border-t border-slate-800/80 bg-slate-950/70 text-xs">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-semibold text-slate-200 text-[11px]">
+              {isSuperAdmin ? 'Akses Superadmin' : 'Sesi Login Sales'}
+            </span>
+          </div>
+          <span
+            className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+              isSuperAdmin
+                ? 'bg-purple-900/60 text-purple-300 border border-purple-700/50'
+                : 'bg-blue-900/60 text-blue-300 border border-blue-700/50'
+            }`}
+          >
+            {currentUser.role.replace('_', ' ')}
+          </span>
         </div>
-        <div className="text-[11px] text-slate-400 space-y-0.5">
-          <div className="truncate">Nama: <span className="text-slate-200 font-medium">{currentUser.name}</span></div>
-          <div>Role: <span className="capitalize text-blue-400 font-medium">{currentUser.role.replace('_', ' ')}</span></div>
+
+        <div className="text-[11px] text-slate-400 space-y-1">
+          <div className="truncate">
+            User:{' '}
+            <strong className="text-white font-mono">
+              {currentUser.username || currentUser.name}
+            </strong>
+          </div>
+          {isSales && (
+            <div className="text-[10px] text-amber-400/90">
+              🔒 Terbatas: Hanya transaksi pribadi
+            </div>
+          )}
         </div>
+
+        <button
+          type="button"
+          onClick={logout}
+          className="mt-3 w-full flex items-center justify-center gap-2 py-1.5 px-3 bg-slate-800/90 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-700/60 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Keluar (Logout)</span>
+        </button>
       </div>
     </aside>
   );

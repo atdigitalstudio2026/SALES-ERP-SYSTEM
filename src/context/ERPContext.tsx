@@ -35,10 +35,14 @@ interface ERPContextType {
   firebaseProjectId: string;
 
   // App & Security State
+  isLoggedIn: boolean;
+  login: (usernameOrCode: string, password: string) => { success: boolean; error?: string };
+  logout: () => void;
   currentUser: CurrentUser;
   userPersonas: CurrentUser[];
   switchUserPersona: (userId: string) => void;
   updateUserPersona: (userId: string, data: { name?: string; email?: string }) => void;
+  updateSalesCredentials: (salesId: string, accessCode: string, password: string) => void;
   allowMultiCompany: boolean;
   setAllowMultiCompany: (allowed: boolean) => void;
 
@@ -97,6 +101,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [allowMultiCompany, setAllowMultiCompanyState] = useState<boolean>(storage.getAllowMultiCompany());
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('ALL');
   const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => storage.isLoggedIn());
 
   const loadData = () => {
     setCompanies(storage.getCompanies());
@@ -122,6 +127,43 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsFirebaseConnected(connected);
     });
   }, []);
+
+  const login = (usernameOrCode: string, password: string) => {
+    const result = storage.authenticate(usernameOrCode, password);
+    if (result.success && result.user) {
+      setCurrentUserState(result.user);
+      setIsLoggedIn(true);
+      if (result.user.role === 'sales') {
+        const salesDefaultAccess = storage
+          .getAccessForSales(result.user.sales_id || '')
+          .find((a) => a.is_default);
+        if (salesDefaultAccess) {
+          setSelectedCompanyId(salesDefaultAccess.company_id);
+        } else if (result.user.company_id) {
+          setSelectedCompanyId(result.user.company_id);
+        }
+      } else {
+        setSelectedCompanyId('ALL');
+      }
+      loadData();
+      return { success: true };
+    }
+    return { success: false, error: result.error };
+  };
+
+  const logout = () => {
+    storage.logout();
+    setIsLoggedIn(false);
+  };
+
+  const updateSalesCredentials = (
+    salesId: string,
+    accessCode: string,
+    passwordInput: string
+  ) => {
+    storage.updateSalesCredentials(salesId, accessCode, passwordInput);
+    loadData();
+  };
 
   const switchUserPersona = (userId: string) => {
     const personas = storage.getUserPersonas();
@@ -379,10 +421,14 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         auditLogs,
         isFirebaseConnected,
         firebaseProjectId: FIREBASE_PROJECT_ID,
+        isLoggedIn,
+        login,
+        logout,
         currentUser,
         userPersonas,
         switchUserPersona,
         updateUserPersona,
+        updateSalesCredentials,
         allowMultiCompany,
         setAllowMultiCompany,
         selectedCompanyId,

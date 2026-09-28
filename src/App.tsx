@@ -16,6 +16,7 @@ import { CreateOrderModal } from './components/orders/CreateOrderModal';
 import { OrderDetailModal } from './components/orders/OrderDetailModal';
 import { RecordPaymentModal } from './components/payments/RecordPaymentModal';
 import { InvoicePrintView } from './components/orders/InvoicePrintView';
+import { LoginView } from './components/auth/LoginView';
 import { SalesOrder } from './types';
 
 const MainAppContent: React.FC = () => {
@@ -30,7 +31,20 @@ const MainAppContent: React.FC = () => {
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<SalesOrder | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
-  const { orders } = useERP();
+  const { orders, currentUser } = useERP();
+
+  // If a sales user is active, ensure they cannot land on restricted Superadmin pages
+  React.useEffect(() => {
+    if (
+      currentUser.role === 'sales' &&
+      (currentTab === 'companies' ||
+        currentTab === 'sales-access' ||
+        currentTab === 'audit' ||
+        currentTab === 'reports')
+    ) {
+      setCurrentTab('dashboard');
+    }
+  }, [currentUser, currentTab]);
 
   const handleSelectOrder = (order: SalesOrder) => {
     setSelectedOrderForDetail(order);
@@ -162,10 +176,20 @@ const MainAppContent: React.FC = () => {
   );
 };
 
+const AppRoot: React.FC = () => {
+  const { isLoggedIn } = useERP();
+
+  if (!isLoggedIn) {
+    return <LoginView />;
+  }
+
+  return <MainAppContent />;
+};
+
 export default function App() {
   return (
     <ERPProvider>
-      <MainAppContent />
+      <AppRoot />
     </ERPProvider>
   );
 }

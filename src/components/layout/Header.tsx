@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
-import { Building2, ShieldCheck, UserCheck, Layers, RotateCcw, Edit3, CheckCircle, X, Shield } from 'lucide-react';
+import { Building2, ShieldCheck, UserCheck, Layers, RotateCcw, Edit3, CheckCircle, X, Shield, LogOut, KeyRound } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
@@ -16,6 +16,7 @@ export const Header: React.FC = () => {
     isFirebaseConnected,
     firebaseProjectId,
     resetAllData,
+    logout,
   } = useERP();
 
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -117,20 +118,28 @@ export const Header: React.FC = () => {
           </button>
         )}
 
-        {/* User Persona Switcher */}
+        {/* Active User Display & Role Badge */}
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg hover:border-slate-300 transition-colors">
-          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
-            {currentUser.name
-              .split(' ')
-              .map((n) => n[0])
-              .slice(0, 2)
-              .join('')
-              .toUpperCase()}
+          <div
+            className={`w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shrink-0 ${
+              currentUser.role === 'super_admin'
+                ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-300'
+                : 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
+            }`}
+          >
+            {currentUser.role === 'super_admin'
+              ? 'SA'
+              : currentUser.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()}
           </div>
           <div className="flex flex-col">
             <div className="flex items-center justify-between gap-1">
               <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">
-                Pengguna Aktif
+                {currentUser.role === 'super_admin' ? '👑 Superadmin' : '💼 Sales Terotentikasi'}
               </span>
               <button
                 type="button"
@@ -141,19 +150,23 @@ export const Header: React.FC = () => {
                 <Edit3 className="w-3 h-3" />
               </button>
             </div>
-            <select
-              value={currentUser.user_id}
-              onChange={(e) => switchUserPersona(e.target.value)}
-              className="text-xs font-semibold text-slate-800 bg-transparent border-0 p-0 focus:ring-0 cursor-pointer max-w-[190px] truncate"
-            >
-              {userPersonas.map((u) => (
-                <option key={u.user_id} value={u.user_id}>
-                  {u.name} ({u.role.replace('_', ' ').toUpperCase()})
-                </option>
-              ))}
-            </select>
+
+            <div className="text-xs font-bold text-slate-800 truncate max-w-[170px]">
+              {currentUser.name}
+            </div>
           </div>
         </div>
+
+        {/* Logout Button */}
+        <button
+          type="button"
+          onClick={logout}
+          title="Keluar dari akun (Logout)"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">Keluar</span>
+        </button>
 
         {/* Reset Demo Data Button */}
         <button
