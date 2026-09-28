@@ -9,6 +9,7 @@ import { CompaniesView } from './components/master/CompaniesView';
 import { SalesAccessView } from './components/master/SalesAccessView';
 import { CustomersView } from './components/master/CustomersView';
 import { PriceListsView } from './components/master/PriceListsView';
+import { ProductsView } from './components/master/ProductsView';
 import { ReportsView } from './components/reports/ReportsView';
 import { AuditLogView } from './components/audit/AuditLogView';
 import { CreateOrderModal } from './components/orders/CreateOrderModal';
@@ -88,6 +89,8 @@ const MainAppContent: React.FC = () => {
           )}
 
           {currentTab === 'reports' && <ReportsView />}
+
+          {currentTab === 'products' && <ProductsView onNavigateToTab={setCurrentTab} />}
 
           {currentTab === 'companies' && <CompaniesView />}
 

@@ -15,6 +15,8 @@ import {
   CheckCircle,
   Hash,
   RefreshCw,
+  PenLine,
+  Package,
 } from 'lucide-react';
 import { Customer, Product } from '../../types';
 
@@ -26,6 +28,9 @@ interface CreateOrderModalProps {
 
 interface OrderItemInput {
   product_id: string;
+  is_custom?: boolean;
+  custom_product_name?: string;
+  custom_unit?: string;
   quantity: number;
   unit_price: number;
   discount_percent: number;
@@ -48,6 +53,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     permittedCompanies,
     defaultSalesCompany,
     createOrUpdateOrder,
+    saveProduct,
     resolvePrice,
   } = useERP();
 
@@ -87,6 +93,15 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   ]);
 
   const [error, setError] = useState<string | null>(null);
+
+  // Quick Add Catalog Product Modal State
+  const [isAddCatalogOpen, setIsAddCatalogOpen] = useState(false);
+  const [newCatCode, setNewCatCode] = useState('');
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatCategory, setNewCatCategory] = useState('Pupuk & Agrikultur');
+  const [newCatUnit, setNewCatUnit] = useState('Sak');
+  const [newCatCost, setNewCatCost] = useState<number>(0);
+  const [catalogModalError, setCatalogModalError] = useState<string | null>(null);
 
   // Initialize company on open or role change
   useEffect(() => {
@@ -223,14 +238,16 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
   // Calculated items and totals
   const calculatedItems = useMemo(() => {
-    return items.map((item) => {
-      const prod = products.find((p) => p.product_id === item.product_id);
+    return items.map((item, idx) => {
+      const isCustom = item.is_custom || item.product_id === '__CUSTOM__';
+      const prod = !isCustom ? products.find((p) => p.product_id === item.product_id) : undefined;
       const sub = Math.round(item.quantity * item.unit_price * (1 - (item.discount_percent || 0) / 100));
       return {
         ...item,
-        product_code: prod?.product_code || '',
-        product_name: prod?.product_name || '',
-        unit: prod?.unit || 'Pcs',
+        product_id: isCustom ? `manual-${idx + 1}` : item.product_id,
+        product_code: isCustom ? 'MANUAL' : (prod?.product_code || 'PROD'),
+        product_name: isCustom ? (item.custom_product_name?.trim() || 'Produk Manual') : (prod?.product_name || 'Item'),
+        unit: isCustom ? (item.custom_unit?.trim() || 'Pcs') : (prod?.unit || 'Pcs'),
         subtotal: sub,
       };
     });
@@ -245,20 +262,50 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     const updated = [...items];
     const current = { ...updated[index], [field]: value };
 
-    // If product changed, update price automatically from price lists
-    if (field === 'product_id' && selectedCompanyId) {
-      const newPrice = resolvePrice(
-        selectedCompanyId,
-        value,
-        currentCustomer?.customer_type || 'all',
-        selectedCustomerId,
-        current.quantity
-      );
-      current.unit_price = newPrice;
+    // If product changed in dropdown
+    if (field === 'product_id') {
+      if (value === '__CUSTOM__') {
+        current.is_custom = true;
+        current.product_id = '__CUSTOM__';
+        if (!current.custom_unit) current.custom_unit = 'Pcs';
+      } else {
+        current.is_custom = false;
+        current.product_id = value;
+        if (selectedCompanyId) {
+          const newPrice = resolvePrice(
+            selectedCompanyId,
+            value,
+            currentCustomer?.customer_type || 'all',
+            selectedCustomerId,
+            current.quantity
+          );
+          current.unit_price = newPrice;
+        }
+      }
     }
 
-    // If quantity changed, check if tier discount applies
-    if (field === 'quantity' && selectedCompanyId) {
+    // If switching is_custom
+    if (field === 'is_custom') {
+      current.is_custom = Boolean(value);
+      if (value) {
+        current.product_id = '__CUSTOM__';
+        if (!current.custom_unit) current.custom_unit = 'Pcs';
+      } else {
+        current.product_id = products[0]?.product_id || '';
+        if (selectedCompanyId && current.product_id) {
+          current.unit_price = resolvePrice(
+            selectedCompanyId,
+            current.product_id,
+            currentCustomer?.customer_type || 'all',
+            selectedCustomerId,
+            current.quantity
+          );
+        }
+      }
+    }
+
+    // If quantity changed and item is from catalog, recalculate tiered price
+    if (field === 'quantity' && selectedCompanyId && !current.is_custom && current.product_id !== '__CUSTOM__') {
       const newPrice = resolvePrice(
         selectedCompanyId,
         current.product_id,
@@ -273,7 +320,23 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     setItems(updated);
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = (isCustom: boolean = false) => {
+    if (isCustom) {
+      setItems([
+        ...items,
+        {
+          product_id: '__CUSTOM__',
+          is_custom: true,
+          custom_product_name: '',
+          custom_unit: 'Pcs',
+          quantity: 1,
+          unit_price: 0,
+          discount_percent: 0,
+        },
+      ]);
+      return;
+    }
+
     const defaultProd = products[0];
     const unitPrice = defaultProd && selectedCompanyId
       ? resolvePrice(selectedCompanyId, defaultProd.product_id, currentCustomer?.customer_type || 'all', selectedCustomerId, 100)
@@ -283,6 +346,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       ...items,
       {
         product_id: defaultProd?.product_id || '',
+        is_custom: false,
         quantity: 100,
         unit_price: unitPrice,
         discount_percent: 0,
@@ -293,6 +357,61 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const handleRemoveItem = (index: number) => {
     if (items.length <= 1) return;
     setItems(items.filter((_, idx) => idx !== index));
+  };
+
+  const handleOpenAddCatalog = () => {
+    const nextSeq = String(products.length + 1).padStart(3, '0');
+    setNewCatCode(`PRD-${nextSeq}`);
+    setNewCatName('');
+    setNewCatCategory('Pupuk & Agrikultur');
+    setNewCatUnit('Sak');
+    setNewCatCost(100000);
+    setCatalogModalError(null);
+    setIsAddCatalogOpen(true);
+  };
+
+  const handleSaveNewCatalogProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCatalogModalError(null);
+
+    if (!newCatCode.trim()) {
+      setCatalogModalError('Kode produk wajib diisi.');
+      return;
+    }
+    if (!newCatName.trim()) {
+      setCatalogModalError('Nama produk katalog wajib diisi.');
+      return;
+    }
+    if (!newCatUnit.trim()) {
+      setCatalogModalError('Satuan produk wajib diisi.');
+      return;
+    }
+
+    try {
+      const saved = saveProduct({
+        product_code: newCatCode.trim().toUpperCase(),
+        product_name: newCatName.trim(),
+        category: newCatCategory.trim() || 'Umum',
+        unit: newCatUnit.trim(),
+        base_cost: Number(newCatCost) || 0,
+      });
+
+      // Automatically add this new product to current order items
+      setItems((prev) => [
+        ...prev,
+        {
+          product_id: saved.product_id,
+          is_custom: false,
+          quantity: 100,
+          unit_price: saved.base_cost || 50000,
+          discount_percent: 0,
+        },
+      ]);
+
+      setIsAddCatalogOpen(false);
+    } catch (err: any) {
+      setCatalogModalError(err.message || 'Gagal menyimpan produk ke katalog');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -320,9 +439,18 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       return;
     }
 
-    if (items.length === 0 || items.some((i) => !i.product_id || i.quantity <= 0)) {
-      setError('Please add at least one valid product line with quantity > 0.');
+    if (items.length === 0 || items.some((i) => !i.is_custom && !i.product_id)) {
+      setError('Harap tambahkan setidaknya satu produk yang valid.');
       return;
+    }
+
+    // Validate manual product names
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if ((it.is_custom || it.product_id === '__CUSTOM__') && !it.custom_product_name?.trim()) {
+        setError(`Nama produk manual pada baris ke-${i + 1} belum diisi. Silakan ketik nama produknya.`);
+        return;
+      }
     }
 
     try {
@@ -617,102 +745,188 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
           {/* Line Items Table (Requirement #12: Price determined by Company!) */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
               <div>
                 <h3 className="text-xs font-bold uppercase text-slate-700 tracking-wider">
-                  Order Line Items (Multi-Company Pricing Matrix)
+                  Daftar Barang / Item Pesanan ({items.length})
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Unit price is dynamically bound to <strong>{currentCompany?.company_name}</strong> price lists.
+                  Sales dapat memilih produk dari katalog atau menginput nama produk secara manual.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-md flex items-center gap-1 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Item</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAddItem(false)}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-md flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Dari Katalog</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddItem(true)}
+                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold rounded-md flex items-center gap-1 transition-colors"
+                >
+                  <PenLine className="w-3.5 h-3.5 text-amber-600" />
+                  <span>+ Input Manual</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenAddCatalog}
+                  className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded-md flex items-center gap-1 transition-colors"
+                >
+                  <Package className="w-3.5 h-3.5 text-blue-600" />
+                  <span>+ Produk Katalog Baru</span>
+                </button>
+              </div>
             </div>
 
             <div className="border border-slate-200 rounded-lg overflow-hidden">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold text-[11px] uppercase tracking-wider">
                   <tr>
-                    <th className="py-2.5 px-3">Product</th>
+                    <th className="py-2.5 px-3 min-w-[260px]">Produk / Deskripsi</th>
                     <th className="py-2.5 px-3 w-24 text-right">Qty</th>
                     <th className="py-2.5 px-3 w-32 text-right">
-                      Price ({currentCompany?.company_code})
+                      Harga Satuan ({currentCompany?.company_code})
                     </th>
-                    <th className="py-2.5 px-3 w-20 text-right">Disc %</th>
+                    <th className="py-2.5 px-3 w-20 text-right">Diskon %</th>
                     <th className="py-2.5 px-3 w-32 text-right">Subtotal</th>
                     <th className="py-2.5 px-3 w-10 text-center"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {items.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 px-3">
-                        <select
-                          value={item.product_id}
-                          onChange={(e) => handleItemChange(idx, 'product_id', e.target.value)}
-                          className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-900 focus:ring-1 focus:ring-blue-500"
-                        >
-                          {products.map((p) => (
-                            <option key={p.product_id} value={p.product_id}>
-                              {p.product_name} ({p.unit})
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(idx, 'quantity', parseInt(e.target.value) || 1)}
-                          className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-right font-mono tabular-nums focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <input
-                          type="number"
-                          min="0"
-                          value={item.unit_price}
-                          onChange={(e) => handleItemChange(idx, 'unit_price', parseFloat(e.target.value) || 0)}
-                          className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-right font-mono tabular-nums focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={item.discount_percent}
-                          onChange={(e) => handleItemChange(idx, 'discount_percent', parseFloat(e.target.value) || 0)}
-                          className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-right font-mono tabular-nums focus:ring-1 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono tabular-nums font-semibold text-slate-900">
-                        {formatIDR(
-                          Math.round(
-                            item.quantity * item.unit_price * (1 - (item.discount_percent || 0) / 100)
-                          )
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(idx)}
-                          disabled={items.length <= 1}
-                          className="text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:hover:text-slate-400"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item, idx) => {
+                    const isCustom = item.is_custom || item.product_id === '__CUSTOM__';
+
+                    return (
+                      <tr key={idx} className={`hover:bg-slate-50/50 ${isCustom ? 'bg-amber-50/20' : ''}`}>
+                        <td className="py-2.5 px-3">
+                          {isCustom ? (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded uppercase flex items-center gap-1">
+                                  <PenLine className="w-2.5 h-2.5" />
+                                  <span>Input Manual</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleItemChange(idx, 'is_custom', false)}
+                                  className="text-[10px] text-blue-600 hover:text-blue-800 hover:underline font-semibold"
+                                >
+                                  Pilih dari Katalog
+                                </button>
+                              </div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={item.custom_product_name || ''}
+                                  onChange={(e) => handleItemChange(idx, 'custom_product_name', e.target.value)}
+                                  placeholder="Ketik nama produk manual..."
+                                  required
+                                  className="w-full px-2 py-1 bg-white border border-amber-300 rounded text-xs text-slate-900 font-medium focus:ring-1 focus:ring-amber-500"
+                                />
+                                <input
+                                  type="text"
+                                  value={item.custom_unit || 'Pcs'}
+                                  onChange={(e) => handleItemChange(idx, 'custom_unit', e.target.value)}
+                                  placeholder="Satuan"
+                                  title="Satuan (Pcs, Kg, Sak, Zak, Box, dll)"
+                                  className="w-20 px-2 py-1 bg-white border border-slate-300 rounded text-xs text-center text-slate-900 font-semibold focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <select
+                                value={item.product_id}
+                                onChange={(e) => {
+                                  if (e.target.value === '__CUSTOM__') {
+                                    handleItemChange(idx, 'is_custom', true);
+                                  } else if (e.target.value === '__NEW_CATALOG__') {
+                                    handleOpenAddCatalog();
+                                  } else {
+                                    handleItemChange(idx, 'product_id', e.target.value);
+                                  }
+                                }}
+                                className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-900 focus:ring-1 focus:ring-blue-500"
+                              >
+                                <optgroup label="Katalog Master Produk">
+                                  {products.map((p) => (
+                                    <option key={p.product_id} value={p.product_id}>
+                                      {p.product_name} ({p.unit})
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="Opsi Khusus">
+                                  <option value="__CUSTOM__">✍️ + Input Manual (Produk Khusus)...</option>
+                                  <option value="__NEW_CATALOG__">📦 + Tambah ke Katalog Master...</option>
+                                </optgroup>
+                              </select>
+                              <div className="flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => handleItemChange(idx, 'is_custom', true)}
+                                  className="text-[10px] text-slate-500 hover:text-amber-700 flex items-center gap-1"
+                                >
+                                  <PenLine className="w-2.5 h-2.5" />
+                                  <span>Ganti ke input manual</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(idx, 'quantity', parseInt(e.target.value) || 1)}
+                            className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-right font-mono tabular-nums focus:ring-1 focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.unit_price}
+                            onChange={(e) => handleItemChange(idx, 'unit_price', parseFloat(e.target.value) || 0)}
+                            className={`w-full px-2 py-1 border rounded text-xs text-right font-mono tabular-nums focus:ring-1 focus:ring-blue-500 ${
+                              isCustom ? 'bg-amber-50/30 border-amber-300 font-bold' : 'bg-white border-slate-300'
+                            }`}
+                          />
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={item.discount_percent}
+                            onChange={(e) => handleItemChange(idx, 'discount_percent', parseFloat(e.target.value) || 0)}
+                            className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-right font-mono tabular-nums focus:ring-1 focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono tabular-nums font-semibold text-slate-900">
+                          {formatIDR(
+                            Math.round(
+                              item.quantity * item.unit_price * (1 - (item.discount_percent || 0) / 100)
+                            )
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(idx)}
+                            disabled={items.length <= 1}
+                            className="text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:hover:text-slate-400"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -824,6 +1038,137 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Mini Modal: Tambah Produk Baru ke Master Katalog */}
+      {isAddCatalogOpen && (
+        <div className="fixed inset-0 z-60 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-blue-400" />
+                <h4 className="font-bold text-xs uppercase tracking-wider">
+                  Tambah Produk ke Katalog Master
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddCatalogOpen(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewCatalogProduct} className="p-5 space-y-3 text-xs">
+              {catalogModalError && (
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{catalogModalError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Kode SKU <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newCatCode}
+                    onChange={(e) => setNewCatCode(e.target.value.toUpperCase())}
+                    placeholder="PRD-001"
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded font-mono font-bold text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Satuan <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    list="cat-units"
+                    value={newCatUnit}
+                    onChange={(e) => setNewCatUnit(e.target.value)}
+                    placeholder="Sak, Kg, Ton..."
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-semibold"
+                  />
+                  <datalist id="cat-units">
+                    <option value="Sak" />
+                    <option value="Kg" />
+                    <option value="Ton" />
+                    <option value="Dus" />
+                    <option value="Box" />
+                    <option value="Pcs" />
+                  </datalist>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Nama Produk Katalog <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="Contoh: Pupuk Organik Granul 50kg"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Kategori</label>
+                  <input
+                    type="text"
+                    list="cat-cats"
+                    value={newCatCategory}
+                    onChange={(e) => setNewCatCategory(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs"
+                  />
+                  <datalist id="cat-cats">
+                    <option value="Pupuk & Agrikultur" />
+                    <option value="Pangan Pokok & Beras" />
+                    <option value="Komoditas Minyak" />
+                    <option value="Bahan Bangunan & Semen" />
+                    <option value="Gula & Manisan" />
+                  </datalist>
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Estimasi HPP (Rp)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newCatCost}
+                    onChange={(e) => setNewCatCost(parseFloat(e.target.value) || 0)}
+                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCatalogOpen(false)}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-semibold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold flex items-center gap-1.5"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>Daftarkan & Pilih</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

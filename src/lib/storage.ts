@@ -27,6 +27,7 @@ const STORAGE_KEYS = {
   PAYMENTS: 'multi_company_erp_payments_v1',
   AUDIT_LOGS: 'multi_company_erp_audit_logs_v1',
   CURRENT_USER: 'multi_company_erp_current_user_v1',
+  USER_PERSONAS: 'multi_company_erp_user_personas_v1',
   SETTINGS: 'multi_company_erp_settings_v1',
 };
 
@@ -1001,9 +1002,45 @@ class StorageService {
     this.set(STORAGE_KEYS.SETTINGS, { allow_multi_company: allowed });
   }
 
-  // Current User
+  // Current User & Personas
+  getUserPersonas(): CurrentUser[] {
+    return this.get<CurrentUser[]>(STORAGE_KEYS.USER_PERSONAS, USER_PERSONAS);
+  }
+
+  updateUserPersona(userId: string, data: { name?: string; email?: string }): CurrentUser {
+    const personas = this.getUserPersonas();
+    const idx = personas.findIndex((p) => p.user_id === userId);
+    if (idx === -1) throw new Error('User persona tidak ditemukan');
+
+    const updated: CurrentUser = {
+      ...personas[idx],
+      name: data.name?.trim() || personas[idx].name,
+      email: data.email?.trim() || personas[idx].email,
+    };
+    personas[idx] = updated;
+    this.set(STORAGE_KEYS.USER_PERSONAS, personas);
+
+    const currentUser = this.getCurrentUser();
+    if (currentUser.user_id === userId) {
+      this.setCurrentUser(updated);
+    }
+
+    this.addAuditLog({
+      company_id: 'ALL',
+      company_code: 'GRP',
+      action: 'UPDATE',
+      module: 'ACCESS_CONTROL',
+      record_id: userId,
+      record_identifier: updated.role,
+      description: `Profil ${updated.role.toUpperCase()} diperbarui menjadi "${updated.name}" (${updated.email})`,
+    });
+
+    return updated;
+  }
+
   getCurrentUser(): CurrentUser {
-    return this.get<CurrentUser>(STORAGE_KEYS.CURRENT_USER, USER_PERSONAS[0]);
+    const personas = this.getUserPersonas();
+    return this.get<CurrentUser>(STORAGE_KEYS.CURRENT_USER, personas[0]);
   }
 
   setCurrentUser(user: CurrentUser): void {
@@ -1283,6 +1320,147 @@ class StorageService {
 
   getProductById(id: string): Product | undefined {
     return this.getProducts().find((p) => p.product_id === id);
+  }
+
+  saveProduct(data: Omit<Product, 'product_id'> & { product_id?: string }): Product {
+    const products = this.getProducts();
+    let saved: Product;
+
+    // Check code uniqueness
+    const existingCode = products.find(
+      (p) => p.product_code.toLowerCase() === data.product_code.trim().toLowerCase() && p.product_id !== data.product_id
+    );
+    if (existingCode) {
+      throw new Error(`Kode produk "${data.product_code}" sudah digunakan oleh "${existingCode.product_name}". Gunakan kode lain.`);
+    }
+
+    if (data.product_id) {
+      const idx = products.findIndex((p) => p.product_id === data.product_id);
+      if (idx === -1) throw new Error('Produk tidak ditemukan');
+      saved = {
+        ...products[idx],
+        ...data,
+        product_id: data.product_id,
+      };
+      products[idx] = saved;
+    } else {
+      saved = {
+        ...data,
+        product_id: generateUUID(),
+      };
+      products.push(saved);
+    }
+
+    this.set(STORAGE_KEYS.PRODUCTS, products);
+    firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.PRODUCTS, saved.product_id, saved);
+
+    const currentUser = this.getCurrentUser();
+    this.addAuditLog({
+      company_id: 'ALL',
+      company_code: 'GRP',
+      action: data.product_id ? 'UPDATE' : 'CREATE',
+      module: 'COMPANY',
+      record_id: saved.product_id,
+      record_identifier: saved.product_code,
+      description: `${currentUser.name} | ${data.product_id ? 'UPDATE' : 'CREATE'} | PRODUCT_CATALOG | ${saved.product_code} - ${saved.product_name}`,
+    });
+
+    return saved;
+  }
+
+  deleteProduct(productId: string): void {
+    const products = this.getProducts();
+    const target = products.find((p) => p.product_id === productId);
+    if (!target) throw new Error('Produk tidak ditemukan');
+
+    const updated = products.filter((p) => p.product_id !== productId);
+    this.set(STORAGE_KEYS.PRODUCTS, updated);
+    firestoreSync.deleteDocument(FIRESTORE_COLLECTIONS.PRODUCTS, productId);
+
+    const currentUser = this.getCurrentUser();
+    this.addAuditLog({
+      company_id: 'ALL',
+      company_code: 'GRP',
+      action: 'DELETE',
+      module: 'COMPANY',
+      record_id: target.product_id,
+      record_identifier: target.product_code,
+      description: `${currentUser.name} | DELETE | PRODUCT_CATALOG | Menghapus produk ${target.product_code} (${target.product_name})`,
+    });
+  }
+
+  bulkImportProducts(
+    items: {
+      product_code: string;
+      product_name: string;
+      category?: string;
+      unit?: string;
+      base_cost?: number;
+      description?: string;
+    }[],
+    overwriteExisting: boolean = true
+  ): { created: number; updated: number; skipped: number } {
+    const products = this.getProducts();
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const item of items) {
+      if (!item.product_code || !item.product_name) {
+        skipped++;
+        continue;
+      }
+
+      const code = item.product_code.trim().toUpperCase();
+      const existingIdx = products.findIndex((p) => p.product_code.toUpperCase() === code);
+
+      if (existingIdx !== -1) {
+        if (overwriteExisting) {
+          const existing = products[existingIdx];
+          const saved: Product = {
+            ...existing,
+            product_name: item.product_name.trim() || existing.product_name,
+            category: item.category?.trim() || existing.category || 'Umum',
+            unit: item.unit?.trim() || existing.unit || 'Pcs',
+            base_cost: item.base_cost !== undefined ? Number(item.base_cost) : existing.base_cost,
+            description: item.description !== undefined ? item.description.trim() : existing.description,
+          };
+          products[existingIdx] = saved;
+          firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.PRODUCTS, saved.product_id, saved);
+          updated++;
+        } else {
+          skipped++;
+        }
+      } else {
+        const saved: Product = {
+          product_id: generateUUID(),
+          product_code: code,
+          product_name: item.product_name.trim(),
+          category: item.category?.trim() || 'Umum',
+          unit: item.unit?.trim() || 'Pcs',
+          base_cost: Number(item.base_cost) || 0,
+          description: item.description?.trim() || '',
+        };
+        products.push(saved);
+        firestoreSync.saveDocument(FIRESTORE_COLLECTIONS.PRODUCTS, saved.product_id, saved);
+        created++;
+      }
+    }
+
+    this.set(STORAGE_KEYS.PRODUCTS, products);
+
+    const currentUser = this.getCurrentUser();
+    this.addAuditLog({
+      company_id: 'ALL',
+      company_code: 'GRP',
+      action: 'CREATE',
+      module: 'COMPANY',
+      record_id: 'BULK_IMPORT',
+      record_identifier: 'CSV_IMPORT',
+      description: `${currentUser.name} | BULK_IMPORT | PRODUCT_CATALOG | Impor ${created} produk baru, perbarui ${updated} produk, lewati ${skipped}`,
+    });
+
+    return { created, updated, skipped };
   }
 
   // Price Lists (Price linked to Company, Product, Customer Type)

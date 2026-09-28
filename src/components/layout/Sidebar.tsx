@@ -12,12 +12,14 @@ import {
   History,
   Shield,
   PlusCircle,
+  Package,
 } from 'lucide-react';
 
 export type NavigationTab =
   | 'dashboard'
   | 'orders'
   | 'payments'
+  | 'products'
   | 'companies'
   | 'sales-access'
   | 'customers'
@@ -43,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'orders', label: 'Sales Orders', icon: FileText },
     { id: 'payments', label: 'Payments & AR', icon: CreditCard },
     { id: 'reports', label: 'Multi-Company Reports', icon: BarChart3 },
+    { id: 'products', label: 'Master Produk (Katalog)', icon: Package },
     { id: 'companies', label: 'Master Companies', icon: Building2 },
     { id: 'sales-access', label: 'Sales Access Matrix', icon: Users2 },
     { id: 'customers', label: 'Customers & PT Terms', icon: Briefcase },

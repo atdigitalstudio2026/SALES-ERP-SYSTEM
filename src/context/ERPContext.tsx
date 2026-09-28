@@ -36,7 +36,9 @@ interface ERPContextType {
 
   // App & Security State
   currentUser: CurrentUser;
+  userPersonas: CurrentUser[];
   switchUserPersona: (userId: string) => void;
+  updateUserPersona: (userId: string, data: { name?: string; email?: string }) => void;
   allowMultiCompany: boolean;
   setAllowMultiCompany: (allowed: boolean) => void;
 
@@ -64,6 +66,12 @@ interface ERPContextType {
   updateSalesAccess: (salesId: string, companyAccessList: { company_id: string; is_default: boolean; has_access: boolean }[]) => void;
   saveCustomer: (data: Parameters<typeof storage.saveCustomer>[0]) => Customer;
   saveCustomerCompany: (data: Parameters<typeof storage.saveCustomerCompany>[0]) => CustomerCompany;
+  saveProduct: (data: Parameters<typeof storage.saveProduct>[0]) => Product;
+  deleteProduct: (productId: string) => void;
+  bulkImportProducts: (
+    items: Parameters<typeof storage.bulkImportProducts>[0],
+    overwriteExisting?: boolean
+  ) => { created: number; updated: number; skipped: number };
   savePriceList: (data: Parameters<typeof storage.savePriceList>[0]) => PriceList;
   resolvePrice: (companyId: string, productId: string, customerType?: string, customerId?: string, qty?: number) => number;
   resetAllData: () => void;
@@ -84,7 +92,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [payments, setPayments] = useState<Payment[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
-  const [currentUser, setCurrentUserState] = useState<CurrentUser>(storage.getCurrentUser());
+  const [currentUser, setCurrentUserState] = useState<CurrentUser>(() => storage.getCurrentUser());
+  const [userPersonas, setUserPersonas] = useState<CurrentUser[]>(() => storage.getUserPersonas());
   const [allowMultiCompany, setAllowMultiCompanyState] = useState<boolean>(storage.getAllowMultiCompany());
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('ALL');
   const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(false);
@@ -101,6 +110,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPayments(storage.getPayments());
     setAuditLogs(storage.getAuditLogs());
     setAllowMultiCompanyState(storage.getAllowMultiCompany());
+    setUserPersonas(storage.getUserPersonas());
+    setCurrentUserState(storage.getCurrentUser());
   };
 
   useEffect(() => {
@@ -113,7 +124,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const switchUserPersona = (userId: string) => {
-    const found = USER_PERSONAS.find((u) => u.user_id === userId);
+    const personas = storage.getUserPersonas();
+    const found = personas.find((u) => u.user_id === userId);
     if (found) {
       storage.setCurrentUser(found);
       setCurrentUserState(found);
@@ -129,6 +141,15 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedCompanyId('ALL');
       }
     }
+  };
+
+  const updateUserPersona = (userId: string, data: { name?: string; email?: string }) => {
+    const updated = storage.updateUserPersona(userId, data);
+    setUserPersonas(storage.getUserPersonas());
+    if (currentUser.user_id === userId) {
+      setCurrentUserState(updated);
+    }
+    loadData();
   };
 
   const setAllowMultiCompany = (allowed: boolean) => {
@@ -302,6 +323,26 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved;
   };
 
+  const saveProduct = (data: Parameters<typeof storage.saveProduct>[0]) => {
+    const saved = storage.saveProduct(data);
+    loadData();
+    return saved;
+  };
+
+  const deleteProduct = (productId: string) => {
+    storage.deleteProduct(productId);
+    loadData();
+  };
+
+  const bulkImportProducts = (
+    items: Parameters<typeof storage.bulkImportProducts>[0],
+    overwriteExisting: boolean = true
+  ) => {
+    const res = storage.bulkImportProducts(items, overwriteExisting);
+    loadData();
+    return res;
+  };
+
   const savePriceList = (data: Parameters<typeof storage.savePriceList>[0]) => {
     const saved = storage.savePriceList(data);
     loadData();
@@ -339,7 +380,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isFirebaseConnected,
         firebaseProjectId: FIREBASE_PROJECT_ID,
         currentUser,
+        userPersonas,
         switchUserPersona,
+        updateUserPersona,
         allowMultiCompany,
         setAllowMultiCompany,
         selectedCompanyId,
@@ -359,6 +402,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSalesAccess,
         saveCustomer,
         saveCustomerCompany,
+        saveProduct,
+        deleteProduct,
+        bulkImportProducts,
         savePriceList,
         resolvePrice,
         resetAllData,
